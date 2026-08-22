@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Demo del Sistema de Gestión ATET del Ministerio de Educación" />
+    <title>Sistema de Gestión ATET | Iniciar sesión</title>
+    <link rel="stylesheet" href="src/assets/css/login.css" />
+  </head>
+  <body>
+    <main class="login-page">
+      <header class="brand" aria-label="Ministerio de Educación">
+        <img
+          class="brand__logo"
+          src="src/assets/images/logo-minedu.png"
+          alt="Perú, Ministerio de Educación"
+        />
+        <p>Dirección de Innovación Tecnológica<br />en Educación (DITE)</p>
+      </header>
+
+      <section class="login-card" aria-labelledby="login-title">
+        <div class="login-card__heading">
+          <p>INICIAR SESIÓN</p>
+          <h1 id="login-title">Sistema de Gestión ATET</h1>
+        </div>
+
+        <form id="login-form" novalidate>
+          <div class="field">
+            <label for="usuario">Usuario</label>
+            <input id="usuario" name="usuario" type="text" autocomplete="username" placeholder="Usuario" required />
+          </div>
+
+          <div class="field">
+            <label for="contrasena">Contraseña</label>
+            <input id="contrasena" name="contrasena" type="password" autocomplete="current-password" placeholder="Contraseña" required />
+          </div>
+
+          <p id="form-message" class="form-message" role="alert" aria-live="polite"></p>
+
+          <button class="login-button" type="submit">Iniciar Sesión</button>
+
+          <label class="remember">
+            <input id="recordar" name="recordar" type="checkbox" />
+            <span>Recuérdamelo</span>
+          </label>
+
+          <button class="forgot-button" id="forgot-button" type="button">
+            ¿Olvidaste tu contraseña?
+          </button>
+        </form>
+      </section>
+    </main>
+
+    <!-- Usuarios ficticios y públicos para esta demostración estática. -->
+    <script src="src/config/credenciales.demo.js"></script>
+    <script src="src/config/roles.js"></script>
+    <script src="src/assets/js/login.js"></script>
+  </body>
+</html>

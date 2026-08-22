@@ -1,0 +1,243 @@
+:root {
+  --navy: #102e57;
+  --navy-hover: #0a2345;
+  --red: #d52b1e;
+  --text: #151515;
+  --muted: #747474;
+  --danger: #b42318;
+  --background-image: url("../images/fondo-login.png");
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  min-height: 100svh;
+  margin: 0;
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.login-page {
+  position: relative;
+  display: grid;
+  min-height: 100vh;
+  min-height: 100svh;
+  place-items: center;
+  padding: 2rem;
+  overflow: hidden;
+  isolation: isolate;
+  background: #eef1f6 var(--background-image) center / cover no-repeat;
+}
+
+.login-page::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: rgba(246, 248, 252, 0.08);
+  content: "";
+}
+
+.brand {
+  position: absolute;
+  top: clamp(1.25rem, 4vw, 3.25rem);
+  left: clamp(1.25rem, 4vw, 4.25rem);
+}
+
+.brand__logo {
+  display: block;
+  width: clamp(250px, 27vw, 390px);
+  height: auto;
+}
+
+.brand p {
+  margin: 0.8rem 0 0 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.login-card {
+  width: min(100%, 620px);
+  margin: 7rem 0 5rem;
+  padding: clamp(2rem, 5vw, 4.5rem);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.93);
+  box-shadow: 0 18px 60px rgba(17, 42, 76, 0.12);
+  backdrop-filter: blur(4px);
+}
+
+.login-card__heading {
+  margin-bottom: 2.75rem;
+  text-align: center;
+}
+
+.login-card__heading p,
+.login-card__heading h1 {
+  margin: 0;
+  font-size: clamp(1.55rem, 4vw, 2rem);
+}
+
+.login-card__heading p {
+  margin-bottom: 2.5rem;
+  font-weight: 800;
+}
+
+.login-card__heading h1 {
+  font-weight: 700;
+}
+
+.field {
+  margin-bottom: 1.5rem;
+}
+
+.field label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.field input {
+  width: 100%;
+  height: 68px;
+  padding: 0 1rem;
+  border: 1px solid #535353;
+  border-radius: 8px;
+  outline: none;
+  background: #fff;
+  font-size: 1.2rem;
+}
+
+.field input:focus {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(16, 46, 87, 0.16);
+}
+
+.field input::placeholder {
+  color: #979797;
+}
+
+.form-message {
+  min-height: 1.25rem;
+  margin: -0.5rem 0 0.75rem;
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.login-button {
+  width: 100%;
+  min-height: 66px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--navy);
+  color: #fff;
+  cursor: pointer;
+  font-size: 1.35rem;
+  font-weight: 700;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.login-button:hover {
+  background: var(--navy-hover);
+}
+
+.login-button:active {
+  transform: translateY(1px);
+}
+
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: fit-content;
+  margin-top: 1.75rem;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.remember input {
+  width: 21px;
+  height: 21px;
+  margin: 0;
+  accent-color: var(--navy);
+}
+
+.forgot-button {
+  display: block;
+  margin: 4rem auto 0;
+  padding: 0.4rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.forgot-button:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 720px) {
+  .login-page {
+    align-items: start;
+    padding: 1rem;
+    background-position: 38% center;
+  }
+
+  .brand {
+    position: static;
+    width: 100%;
+    justify-self: center;
+    text-align: center;
+  }
+
+  .brand__logo {
+    width: min(76vw, 310px);
+    margin-inline: auto;
+  }
+
+  .brand p {
+    margin: 0.8rem auto 0;
+  }
+
+  .login-card {
+    align-self: center;
+    margin: 1rem 0 7rem;
+    padding: 2rem 1.35rem;
+  }
+
+  .login-card__heading {
+    margin-bottom: 2rem;
+  }
+
+  .login-card__heading p {
+    margin-bottom: 1.5rem;
+  }
+
+  .field input,
+  .login-button {
+    min-height: 56px;
+    height: 56px;
+  }
+
+  .forgot-button {
+    margin-top: 2.5rem;
+  }
+}
+
+@media (max-width: 410px) {
+  .brand p {
+    font-size: 0.8rem;
+  }
+}

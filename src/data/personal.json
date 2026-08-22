@@ -1,0 +1,133 @@
+{
+  "metadata": {
+    "version": "demo-1.0",
+    "naturaleza": "ficticia",
+    "advertencia": "Todos los identificadores y datos de contacto pertenecen exclusivamente a la maqueta."
+  },
+  "asignacion": {
+    "macroId": "macro-demo-01",
+    "plazasAsignadas": 10
+  },
+  "atets": [
+    {
+      "id": "atet-demo-001",
+      "codigo": "ATET-DEMO-001",
+      "nombreCompleto": "ATET Demo 01",
+      "dni": "00000001",
+      "sinad": "SINAD-DEMO-001",
+      "celular": "900000001",
+      "correo": "atet.demo01@example.invalid",
+      "ordenServicio": "OS-DEMO-001-2026",
+      "regionId": "reg-amazonas",
+      "zonaId": "zona-amazonas-01",
+      "fechaInicio": "2026-07-01",
+      "fechaTermino": "2026-12-31",
+      "estado": "activo"
+    },
+    {
+      "id": "atet-demo-002",
+      "codigo": "ATET-DEMO-002",
+      "nombreCompleto": "ATET Demo 02",
+      "dni": "00000002",
+      "sinad": "SINAD-DEMO-002",
+      "celular": "900000002",
+      "correo": "atet.demo02@example.invalid",
+      "ordenServicio": "OS-DEMO-002-2026",
+      "regionId": "reg-amazonas",
+      "zonaId": "zona-amazonas-02",
+      "fechaInicio": "2026-07-01",
+      "fechaTermino": "2026-12-31",
+      "estado": "activo"
+    },
+    {
+      "id": "atet-demo-003",
+      "codigo": "ATET-DEMO-003",
+      "nombreCompleto": "ATET Demo 03",
+      "dni": "00000003",
+      "sinad": "SINAD-DEMO-003",
+      "celular": "900000003",
+      "correo": "atet.demo03@example.invalid",
+      "ordenServicio": "OS-DEMO-003-2026",
+      "regionId": "reg-cusco",
+      "zonaId": "zona-cusco-01",
+      "fechaInicio": "2026-07-01",
+      "fechaTermino": "2026-12-31",
+      "estado": "activo"
+    },
+    {
+      "id": "atet-demo-004",
+      "codigo": "ATET-DEMO-004",
+      "nombreCompleto": "ATET Demo 04",
+      "dni": "00000004",
+      "sinad": "SINAD-DEMO-004",
+      "celular": "900000004",
+      "correo": "atet.demo04@example.invalid",
+      "ordenServicio": "OS-DEMO-004-2026",
+      "regionId": "reg-cusco",
+      "zonaId": "zona-cusco-02",
+      "fechaInicio": "2026-07-01",
+      "fechaTermino": "2026-12-31",
+      "estado": "activo"
+    },
+    {
+      "id": "atet-demo-005",
+      "codigo": "ATET-DEMO-005",
+      "nombreCompleto": "ATET Demo 05",
+      "dni": "00000005",
+      "sinad": "SINAD-DEMO-005",
+      "celular": "900000005",
+      "correo": "atet.demo05@example.invalid",
+      "ordenServicio": "OS-DEMO-005-2026",
+      "regionId": "reg-lima",
+      "zonaId": "zona-lima-02",
+      "fechaInicio": "2026-07-01",
+      "fechaTermino": "2026-12-31",
+      "estado": "activo"
+    },
+    {
+      "id": "atet-demo-006",
+      "codigo": "ATET-DEMO-006",
+      "nombreCompleto": "ATET Demo 06",
+      "dni": "00000006",
+      "sinad": "SINAD-DEMO-006",
+      "celular": "900000006",
+      "correo": "atet.demo06@example.invalid",
+      "ordenServicio": "OS-DEMO-006-2026",
+      "regionId": "reg-loreto",
+      "zonaId": "zona-loreto-03",
+      "fechaInicio": "2026-07-01",
+      "fechaTermino": "2026-12-31",
+      "estado": "activo"
+    },
+    {
+      "id": "atet-demo-007",
+      "codigo": "ATET-DEMO-007",
+      "nombreCompleto": "ATET Demo 07",
+      "dni": "00000007",
+      "sinad": "SINAD-DEMO-007",
+      "celular": "900000007",
+      "correo": "atet.demo07@example.invalid",
+      "ordenServicio": "OS-DEMO-007-2026",
+      "regionId": "reg-piura",
+      "zonaId": "zona-piura-03",
+      "fechaInicio": "2026-07-01",
+      "fechaTermino": "2026-12-31",
+      "estado": "activo"
+    },
+    {
+      "id": "atet-demo-008",
+      "codigo": "ATET-DEMO-008",
+      "nombreCompleto": "ATET Demo 08",
+      "dni": "00000008",
+      "sinad": "SINAD-DEMO-008",
+      "celular": "900000008",
+      "correo": "atet.demo08@example.invalid",
+      "ordenServicio": "OS-DEMO-008-2026",
+      "regionId": "reg-puno",
+      "zonaId": "zona-puno-02",
+      "fechaInicio": "2026-07-01",
+      "fechaTermino": "2026-12-31",
+      "estado": "activo"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "metadata": {
+    "version": "demo-1.0",
+    "naturaleza": "ficticia",
+    "fechaReferencia": "2026-08-21",
+    "advertencia": "Los códigos, nombres y resultados son datos inventados para la maqueta."
+  },
+  "macroId": "macro-demo-01",
+  "periodoPredeterminado": "2026-08",
+  "periodos": [
+    {
+      "id": "2026-07",
+      "entregables": [
+        { "id": "ent-2026-07-01", "atetCodigo": "ATET-DEMO-001", "atetNombre": "ATET Demo 01", "numero": 1, "fechaMaxima": "2026-07-31", "presentacion": { "estado": "presentada", "fecha": "2026-07-21" }, "evaluacion": { "estado": "conforme", "fecha": "2026-07-24", "evaluador": "Macro Demo" } },
+        { "id": "ent-2026-07-02", "atetCodigo": "ATET-DEMO-002", "atetNombre": "ATET Demo 02", "numero": 1, "fechaMaxima": "2026-07-31", "presentacion": { "estado": "presentada", "fecha": "2026-07-22" }, "evaluacion": { "estado": "conforme", "fecha": "2026-07-25", "evaluador": "Macro Demo" } },
+        { "id": "ent-2026-07-03", "atetCodigo": "ATET-DEMO-003", "atetNombre": "ATET Demo 03", "numero": 1, "fechaMaxima": "2026-07-31", "presentacion": { "estado": "presentada", "fecha": "2026-07-23" }, "evaluacion": { "estado": "observada", "fecha": "2026-07-26", "evaluador": "Macro Demo" } },
+        { "id": "ent-2026-07-04", "atetCodigo": "ATET-DEMO-004", "atetNombre": "ATET Demo 04", "numero": 1, "fechaMaxima": "2026-07-31", "presentacion": { "estado": "presentada", "fecha": "2026-07-24" }, "evaluacion": { "estado": "conforme", "fecha": "2026-07-27", "evaluador": "Macro Demo" } },
+        { "id": "ent-2026-07-05", "atetCodigo": "ATET-DEMO-005", "atetNombre": "ATET Demo 05", "numero": 1, "fechaMaxima": "2026-07-31", "presentacion": { "estado": "presentada", "fecha": "2026-07-25" }, "evaluacion": { "estado": "conforme", "fecha": "2026-07-28", "evaluador": "Macro Demo" } },
+        { "id": "ent-2026-07-06", "atetCodigo": "ATET-DEMO-006", "atetNombre": "ATET Demo 06", "numero": 1, "fechaMaxima": "2026-07-31", "presentacion": { "estado": "presentada", "fecha": "2026-07-26" }, "evaluacion": { "estado": "observada", "fecha": "2026-07-29", "evaluador": "Macro Demo" } },
+        { "id": "ent-2026-07-07", "atetCodigo": "ATET-DEMO-007", "atetNombre": "ATET Demo 07", "numero": 1, "fechaMaxima": "2026-07-31", "presentacion": { "estado": "presentada", "fecha": "2026-07-27" }, "evaluacion": { "estado": "conforme", "fecha": "2026-07-30", "evaluador": "Macro Demo" } },
+        { "id": "ent-2026-07-08", "atetCodigo": "ATET-DEMO-008", "atetNombre": "ATET Demo 08", "numero": 1, "fechaMaxima": "2026-07-31", "presentacion": { "estado": "fuera-plazo", "fecha": "2026-08-01" }, "evaluacion": { "estado": "conforme", "fecha": "2026-08-02", "evaluador": "Macro Demo" } }
+      ]
+    },
+    {
+      "id": "2026-08",
+      "entregables": [
+        { "id": "ent-2026-08-01", "atetCodigo": "ATET-DEMO-001", "atetNombre": "ATET Demo 01", "numero": 2, "fechaMaxima": "2026-08-31", "presentacion": { "estado": "presentada", "fecha": "2026-08-14" }, "evaluacion": { "estado": "conforme", "fecha": "2026-08-16", "evaluador": "Macro Demo" } },
+        { "id": "ent-2026-08-02", "atetCodigo": "ATET-DEMO-002", "atetNombre": "ATET Demo 02", "numero": 2, "fechaMaxima": "2026-08-31", "presentacion": { "estado": "presentada", "fecha": "2026-08-15" }, "evaluacion": { "estado": "observada", "fecha": "2026-08-17", "evaluador": "Macro Demo" } },
+        { "id": "ent-2026-08-03", "atetCodigo": "ATET-DEMO-003", "atetNombre": "ATET Demo 03", "numero": 2, "fechaMaxima": "2026-08-31", "presentacion": { "estado": "presentada", "fecha": "2026-08-16" }, "evaluacion": { "estado": "conforme", "fecha": "2026-08-18", "evaluador": "Macro Demo" } },
+        { "id": "ent-2026-08-04", "atetCodigo": "ATET-DEMO-004", "atetNombre": "ATET Demo 04", "numero": 2, "fechaMaxima": "2026-08-31", "presentacion": { "estado": "presentada", "fecha": "2026-08-17" }, "evaluacion": { "estado": "observada", "fecha": "2026-08-19", "evaluador": "Macro Demo" } },
+        { "id": "ent-2026-08-05", "atetCodigo": "ATET-DEMO-005", "atetNombre": "ATET Demo 05", "numero": 2, "fechaMaxima": "2026-08-31", "presentacion": { "estado": "presentada", "fecha": "2026-08-18" }, "evaluacion": { "estado": "conforme", "fecha": "2026-08-20", "evaluador": "Macro Demo" } },
+        { "id": "ent-2026-08-06", "atetCodigo": "ATET-DEMO-006", "atetNombre": "ATET Demo 06", "numero": 2, "fechaMaxima": "2026-08-31", "presentacion": { "estado": "presentada", "fecha": "2026-08-20" }, "evaluacion": { "estado": "pendiente", "fecha": null, "evaluador": null } },
+        { "id": "ent-2026-08-07", "atetCodigo": "ATET-DEMO-007", "atetNombre": "ATET Demo 07", "numero": 2, "fechaMaxima": "2026-08-31", "presentacion": { "estado": "pendiente", "fecha": null }, "evaluacion": { "estado": "pendiente", "fecha": null, "evaluador": null } },
+        { "id": "ent-2026-08-08", "atetCodigo": "ATET-DEMO-008", "atetNombre": "ATET Demo 08", "numero": 2, "fechaMaxima": "2026-08-31", "presentacion": { "estado": "pendiente", "fecha": null }, "evaluacion": { "estado": "pendiente", "fecha": null, "evaluador": null } }
+      ]
+    },
+    {
+      "id": "2026-09",
+      "entregables": [
+        { "id": "ent-2026-09-01", "atetCodigo": "ATET-DEMO-001", "atetNombre": "ATET Demo 01", "numero": 3, "fechaMaxima": "2026-09-30", "presentacion": { "estado": "pendiente", "fecha": null }, "evaluacion": { "estado": "pendiente", "fecha": null, "evaluador": null } },
+        { "id": "ent-2026-09-02", "atetCodigo": "ATET-DEMO-002", "atetNombre": "ATET Demo 02", "numero": 3, "fechaMaxima": "2026-09-30", "presentacion": { "estado": "pendiente", "fecha": null }, "evaluacion": { "estado": "pendiente", "fecha": null, "evaluador": null } },
+        { "id": "ent-2026-09-03", "atetCodigo": "ATET-DEMO-003", "atetNombre": "ATET Demo 03", "numero": 3, "fechaMaxima": "2026-09-30", "presentacion": { "estado": "pendiente", "fecha": null }, "evaluacion": { "estado": "pendiente", "fecha": null, "evaluador": null } },
+        { "id": "ent-2026-09-04", "atetCodigo": "ATET-DEMO-004", "atetNombre": "ATET Demo 04", "numero": 3, "fechaMaxima": "2026-09-30", "presentacion": { "estado": "pendiente", "fecha": null }, "evaluacion": { "estado": "pendiente", "fecha": null, "evaluador": null } },
+        { "id": "ent-2026-09-05", "atetCodigo": "ATET-DEMO-005", "atetNombre": "ATET Demo 05", "numero": 3, "fechaMaxima": "2026-09-30", "presentacion": { "estado": "pendiente", "fecha": null }, "evaluacion": { "estado": "pendiente", "fecha": null, "evaluador": null } },
+        { "id": "ent-2026-09-06", "atetCodigo": "ATET-DEMO-006", "atetNombre": "ATET Demo 06", "numero": 3, "fechaMaxima": "2026-09-30", "presentacion": { "estado": "pendiente", "fecha": null }, "evaluacion": { "estado": "pendiente", "fecha": null, "evaluador": null } },
+        { "id": "ent-2026-09-07", "atetCodigo": "ATET-DEMO-007", "atetNombre": "ATET Demo 07", "numero": 3, "fechaMaxima": "2026-09-30", "presentacion": { "estado": "pendiente", "fecha": null }, "evaluacion": { "estado": "pendiente", "fecha": null, "evaluador": null } },
+        { "id": "ent-2026-09-08", "atetCodigo": "ATET-DEMO-008", "atetNombre": "ATET Demo 08", "numero": 3, "fechaMaxima": "2026-09-30", "presentacion": { "estado": "pendiente", "fecha": null }, "evaluacion": { "estado": "pendiente", "fecha": null, "evaluador": null } }
+      ]
+    }
+  ]
+}

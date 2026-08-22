@@ -1,0 +1,8 @@
+# Credenciales exclusivas del entorno local. No publicar ni versionar.
+src/config/credenciales.local.js
+
+# Documentación interna del desarrollo. No publicar ni versionar.
+docs/
+CONTEXTO_PROYECTO.md
+
+.DS_Store

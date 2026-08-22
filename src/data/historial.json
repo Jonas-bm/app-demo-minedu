@@ -1,0 +1,15 @@
+{
+  "metadata": {
+    "version": "demo-1.0",
+    "naturaleza": "ficticia",
+    "advertencia": "El historial contiene exclusivamente acciones inventadas para la maqueta."
+  },
+  "registros": [
+    { "id": "hist-demo-001", "entidad": "presentacion-entregable", "entidadId": "ent-2026-08-01", "accion": "creacion", "usuario": "Macro Demo", "fecha": "2026-08-14T09:15:00-05:00", "detalle": "Registro de presentación del entregable N.° 2 de ATET-DEMO-001." },
+    { "id": "hist-demo-002", "entidad": "presentacion-entregable", "entidadId": "ent-2026-08-02", "accion": "creacion", "usuario": "Macro Demo", "fecha": "2026-08-15T10:20:00-05:00", "detalle": "Registro de presentación del entregable N.° 2 de ATET-DEMO-002." },
+    { "id": "hist-demo-003", "entidad": "presentacion-entregable", "entidadId": "ent-2026-08-03", "accion": "creacion", "usuario": "Macro Demo", "fecha": "2026-08-16T11:05:00-05:00", "detalle": "Registro de presentación del entregable N.° 2 de ATET-DEMO-003." },
+    { "id": "hist-demo-004", "entidad": "presentacion-entregable", "entidadId": "ent-2026-08-04", "accion": "creacion", "usuario": "Macro Demo", "fecha": "2026-08-17T08:45:00-05:00", "detalle": "Registro de presentación del entregable N.° 2 de ATET-DEMO-004." },
+    { "id": "hist-demo-005", "entidad": "presentacion-entregable", "entidadId": "ent-2026-08-05", "accion": "creacion", "usuario": "Macro Demo", "fecha": "2026-08-18T14:30:00-05:00", "detalle": "Registro de presentación del entregable N.° 2 de ATET-DEMO-005." },
+    { "id": "hist-demo-006", "entidad": "presentacion-entregable", "entidadId": "ent-2026-08-06", "accion": "actualizacion", "usuario": "Macro Demo", "fecha": "2026-08-20T16:10:00-05:00", "detalle": "Actualización administrativa de la presentación del entregable N.° 2 de ATET-DEMO-006." }
+  ]
+}

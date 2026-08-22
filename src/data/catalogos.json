@@ -1,0 +1,262 @@
+{
+  "metadata": {
+    "version": "demo-1.0",
+    "fechaActualizacion": "2026-08-21",
+    "naturaleza": "ficticia",
+    "advertencia": "Datos exclusivos para la maqueta. No constituyen catálogos oficiales del MINEDU."
+  },
+  "ambitos": [
+    {
+      "id": "amb-amazonico",
+      "nombre": "Amazónico"
+    },
+    {
+      "id": "amb-andino",
+      "nombre": "Andino"
+    },
+    {
+      "id": "amb-costa",
+      "nombre": "Costa"
+    }
+  ],
+  "regiones": [
+    {
+      "id": "reg-amazonas",
+      "nombre": "Amazonas",
+      "ambitoId": "amb-amazonico"
+    },
+    {
+      "id": "reg-cusco",
+      "nombre": "Cusco",
+      "ambitoId": "amb-andino"
+    },
+    {
+      "id": "reg-lima",
+      "nombre": "Lima",
+      "ambitoId": "amb-costa"
+    },
+    {
+      "id": "reg-loreto",
+      "nombre": "Loreto",
+      "ambitoId": "amb-amazonico"
+    },
+    {
+      "id": "reg-piura",
+      "nombre": "Piura",
+      "ambitoId": "amb-costa"
+    },
+    {
+      "id": "reg-puno",
+      "nombre": "Puno",
+      "ambitoId": "amb-andino"
+    }
+  ],
+  "zonas": [
+    {
+      "id": "zona-amazonas-01",
+      "regionId": "reg-amazonas",
+      "nombre": "Zona 1",
+      "numero": 1,
+      "estado": "asignada",
+      "disponible": false
+    },
+    {
+      "id": "zona-amazonas-02",
+      "regionId": "reg-amazonas",
+      "nombre": "Zona 2",
+      "numero": 2,
+      "estado": "asignada",
+      "disponible": false
+    },
+    {
+      "id": "zona-amazonas-03",
+      "regionId": "reg-amazonas",
+      "nombre": "Zona 3",
+      "numero": 3,
+      "estado": "disponible",
+      "disponible": true
+    },
+    {
+      "id": "zona-cusco-01",
+      "regionId": "reg-cusco",
+      "nombre": "Zona 1",
+      "numero": 1,
+      "estado": "asignada",
+      "disponible": false
+    },
+    {
+      "id": "zona-cusco-02",
+      "regionId": "reg-cusco",
+      "nombre": "Zona 2",
+      "numero": 2,
+      "estado": "asignada",
+      "disponible": false
+    },
+    {
+      "id": "zona-cusco-03",
+      "regionId": "reg-cusco",
+      "nombre": "Zona 3",
+      "numero": 3,
+      "estado": "disponible",
+      "disponible": true
+    },
+    {
+      "id": "zona-lima-01",
+      "regionId": "reg-lima",
+      "nombre": "Zona 1",
+      "numero": 1,
+      "estado": "disponible",
+      "disponible": true
+    },
+    {
+      "id": "zona-lima-02",
+      "regionId": "reg-lima",
+      "nombre": "Zona 2",
+      "numero": 2,
+      "estado": "asignada",
+      "disponible": false
+    },
+    {
+      "id": "zona-lima-03",
+      "regionId": "reg-lima",
+      "nombre": "Zona 3",
+      "numero": 3,
+      "estado": "disponible",
+      "disponible": true
+    },
+    {
+      "id": "zona-loreto-01",
+      "regionId": "reg-loreto",
+      "nombre": "Zona 1",
+      "numero": 1,
+      "estado": "disponible",
+      "disponible": true
+    },
+    {
+      "id": "zona-loreto-02",
+      "regionId": "reg-loreto",
+      "nombre": "Zona 2",
+      "numero": 2,
+      "estado": "disponible",
+      "disponible": true
+    },
+    {
+      "id": "zona-loreto-03",
+      "regionId": "reg-loreto",
+      "nombre": "Zona 3",
+      "numero": 3,
+      "estado": "asignada",
+      "disponible": false
+    },
+    {
+      "id": "zona-piura-01",
+      "regionId": "reg-piura",
+      "nombre": "Zona 1",
+      "numero": 1,
+      "estado": "disponible",
+      "disponible": true
+    },
+    {
+      "id": "zona-piura-02",
+      "regionId": "reg-piura",
+      "nombre": "Zona 2",
+      "numero": 2,
+      "estado": "disponible",
+      "disponible": true
+    },
+    {
+      "id": "zona-piura-03",
+      "regionId": "reg-piura",
+      "nombre": "Zona 3",
+      "numero": 3,
+      "estado": "asignada",
+      "disponible": false
+    },
+    {
+      "id": "zona-puno-01",
+      "regionId": "reg-puno",
+      "nombre": "Zona 1",
+      "numero": 1,
+      "estado": "disponible",
+      "disponible": true
+    },
+    {
+      "id": "zona-puno-02",
+      "regionId": "reg-puno",
+      "nombre": "Zona 2",
+      "numero": 2,
+      "estado": "asignada",
+      "disponible": false
+    },
+    {
+      "id": "zona-puno-03",
+      "regionId": "reg-puno",
+      "nombre": "Zona 3",
+      "numero": 3,
+      "estado": "disponible",
+      "disponible": true
+    }
+  ],
+  "periodos": [
+    {
+      "id": "2026-07",
+      "mes": 7,
+      "mesNombre": "Julio",
+      "anio": 2026,
+      "fechaCorte": "2026-07-25",
+      "fechaMaximaPresentacion": "2026-07-31",
+      "estado": "cerrado"
+    },
+    {
+      "id": "2026-08",
+      "mes": 8,
+      "mesNombre": "Agosto",
+      "anio": 2026,
+      "fechaCorte": "2026-08-25",
+      "fechaMaximaPresentacion": "2026-08-31",
+      "estado": "vigente"
+    },
+    {
+      "id": "2026-09",
+      "mes": 9,
+      "mesNombre": "Septiembre",
+      "anio": 2026,
+      "fechaCorte": "2026-09-25",
+      "fechaMaximaPresentacion": "2026-09-30",
+      "estado": "proximo"
+    }
+  ],
+  "estados": {
+    "atet": [
+      { "id": "pendiente-registro", "nombre": "Pendiente de registro", "icono": "reloj" },
+      { "id": "activo", "nombre": "Activo", "icono": "check" },
+      { "id": "inactivo", "nombre": "Inactivo", "icono": "pausa" },
+      { "id": "finalizado", "nombre": "Finalizado", "icono": "archivo" }
+    ],
+    "zona": [
+      { "id": "disponible", "nombre": "Disponible", "icono": "check" },
+      { "id": "asignada", "nombre": "Asignada", "icono": "bloqueo" }
+    ],
+    "presentacion": [
+      { "id": "pendiente", "nombre": "Pendiente", "icono": "reloj" },
+      { "id": "presentada", "nombre": "Presentada", "icono": "check" },
+      { "id": "fuera-plazo", "nombre": "Fuera de plazo", "icono": "alerta" }
+    ],
+    "evaluacion": [
+      { "id": "pendiente", "nombre": "Pendiente", "icono": "reloj" },
+      { "id": "conforme", "nombre": "Conforme", "icono": "check" },
+      { "id": "observada", "nombre": "Observada", "icono": "alerta" }
+    ],
+    "informe": [
+      { "id": "pendiente", "nombre": "Pendiente", "icono": "reloj" },
+      { "id": "en-elaboracion", "nombre": "En elaboración", "icono": "edicion" },
+      { "id": "generado", "nombre": "Generado", "icono": "check" },
+      { "id": "anulado", "nombre": "Anulado", "icono": "bloqueo" }
+    ],
+    "importacion": [
+      { "id": "importada", "nombre": "Importada", "icono": "check" },
+      { "id": "importada-advertencia", "nombre": "Importada con advertencia", "icono": "alerta" },
+      { "id": "no-importada", "nombre": "No importada", "icono": "error" }
+    ]
+  }
+}

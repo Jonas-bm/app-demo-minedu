@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Panel del Sistema de Gestión ATET de la DITE" />
+    <title>Sistema de Gestión ATET | Panel</title>
+    <link rel="stylesheet" href="../assets/css/inicio.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Saltar al contenido principal</a>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+        <div class="sidebar__brand">
+          <img src="../assets/images/logo-minedu.png" alt="Ministerio de Educación" />
+        </div>
+        <nav class="sidebar__nav" id="sidebar-nav"></nav>
+        <button class="sidebar__logout" id="sidebar-logout" type="button">Cerrar sesión</button>
+      </aside>
+
+      <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+      <div class="app-content">
+        <header class="topbar">
+          <button class="menu-button" id="menu-button" type="button" aria-label="Abrir menú" aria-controls="sidebar" aria-expanded="false">
+            <span></span><span></span><span></span>
+          </button>
+          <div class="dite-brand" aria-label="Dirección de Innovación Tecnológica en Educación">
+            <strong>DITE</strong>
+            <span>Dirección de Innovación Tecnológica<br />en Educación</span>
+          </div>
+          <div class="user-menu">
+            <div class="user-menu__details">
+              <span>Rol: <strong id="user-role">—</strong></span>
+              <span id="user-name">—</span>
+            </div>
+            <span class="user-menu__avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.5-4 2.8-6 7-6s6.5 2 7 6"/></svg></span>
+            <button class="logout-button" id="logout" type="button">Cerrar sesión</button>
+          </div>
+        </header>
+
+        <main class="main-content" id="main-content" tabindex="-1">
+          <div class="page-heading">
+            <h1 class="sr-only">Dashboard</h1>
+            <p class="breadcrumb" aria-label="Ruta actual"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/></svg><span>› Dashboard</span></p>
+          </div>
+          <section class="module-container" id="module-container" aria-labelledby="module-title" aria-live="polite">
+            <h2 id="module-title">Cargando módulo…</h2>
+            <p id="module-description">Estamos preparando el contenido solicitado.</p>
+            <div id="module-dynamic"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+    <script src="../config/roles.js"></script>
+    <script src="../config/modulos.js"></script>
+    <script src="../config/denominacion.js"></script>
+    <script src="../config/importacion.js"></script>
+    <script src="../config/evaluacion.js"></script>
+    <script src="../config/informe.js"></script>
+    <script src="../config/demo-store.js"></script>
+    <script src="../assets/js/dashboard-calculos.js"></script>
+    <script src="../assets/js/entregables-calculos.js"></script>
+    <script src="../assets/js/entregables.js"></script>
+    <script src="../assets/js/historial.js"></script>
+    <script src="../assets/js/evaluacion.js"></script>
+    <script src="../assets/js/gestor-bandeja.js"></script>
+    <script src="../assets/js/gestor-dashboard.js"></script>
+    <script src="../assets/js/informe-vista-previa.js"></script>
+    <script src="../assets/js/gestor-historial.js"></script>
+    <script src="../assets/js/jefe-dashboard.js"></script>
+    <script src="../assets/js/jefe-avance-macro.js"></script>
+    <script src="../assets/js/jefe-estado-entregables.js"></script>
+    <script src="../assets/js/jefe-informes-macro.js"></script>
+    <script src="../assets/js/jefe-productividad-gestor.js"></script>
+    <script src="../assets/js/perfil.js"></script>
+    <script src="../assets/js/dashboard.js"></script>
+    <script src="../assets/js/atet-calculos.js"></script>
+    <script src="../assets/js/mis-atet.js"></script>
+    <script src="../assets/js/registrar-atet.js"></script>
+    <script src="../assets/js/importacion-validacion.js"></script>
+    <script src="../assets/js/importar-atet.js"></script>
+    <script src="../assets/js/select-ui.js"></script>
+    <script src="../assets/js/inicio.js"></script>
+  </body>
+</html>
