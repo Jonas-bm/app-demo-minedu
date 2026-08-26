@@ -200,16 +200,69 @@
     container.innerHTML = `${notice()}${table(["Macro", "Grupo", "Región", "ATET asignados", "Estado"], groups.map((item) => `<tr><td>${escape(item.macro)}</td><td>${escape(item.group)}</td><td>${escape(item.region)}</td><td>${item.assigned}</td><td><span class="admin-badge admin-badge--ok">${item.status}</span></td></tr>`))}<p class="admin-help">Las asignaciones adicionales son datos ficticios para visualizar el módulo administrativo.</p>`;
   }
 
+  function openAtetModal(container, record, records, mode) {
+    const current = atetState();
+    const previous = { estado: "Activo", nombre: record.nombresApellidos || record.nombreCompleto, dni: record.dni, ordenServicio: record.ordenServicio, ...(current[record.codigo] || {}) };
+    const isEdit = mode === "edit";
+    const nextStatus = previous.estado === "Activo" ? "Inactivo" : "Activo";
+    const dialog = document.createElement("dialog");
+    dialog.className = "admin-user-modal admin-atet-modal";
+    dialog.innerHTML = `<form class="admin-user-form" method="dialog" novalidate>
+      <header class="admin-user-modal__header"><div><h3>${isEdit ? "Corregir información del ATET" : `${nextStatus === "Inactivo" ? "Desactivar" : "Activar"} ATET`}</h3><p>${escape(record.codigo)} · Toda modificación quedará registrada en la auditoría.</p></div><button class="admin-user-modal__close" type="button" aria-label="Cerrar modal">×</button></header>
+      <div class="admin-user-modal__body">
+        <p class="registration-form__note"><strong>Acción administrativa:</strong> no elimina el registro ni modifica sus entregables o evaluaciones.</p>
+        ${isEdit ? `<div class="admin-user-form__grid">
+          <div class="registration-field registration-field--full"><label for="admin-atet-name">Nombres y apellidos *</label><input id="admin-atet-name" name="name" value="${escape(previous.nombre)}" required><p class="registration-field__error" data-error="name" role="alert"></p></div>
+          <div class="registration-field"><label for="admin-atet-dni">DNI demo *</label><input id="admin-atet-dni" name="dni" value="${escape(previous.dni)}" inputmode="numeric" maxlength="8" required><p class="registration-field__error" data-error="dni" role="alert"></p></div>
+          <div class="registration-field"><label for="admin-atet-order">Orden de servicio *</label><input id="admin-atet-order" name="order" value="${escape(previous.ordenServicio)}" required><p class="registration-field__error" data-error="order" role="alert"></p></div>
+        </div>` : `<div class="admin-atet-status-change"><span>Estado actual</span><strong>${escape(previous.estado)}</strong><span aria-hidden="true">→</span><span>Nuevo estado</span><strong class="admin-badge admin-badge--${nextStatus === "Activo" ? "ok" : "off"}">${nextStatus}</strong></div>`}
+        <div class="registration-field admin-atet-reason"><label for="admin-atet-reason">Motivo de la ${isEdit ? "corrección" : "modificación de estado"} *</label><textarea id="admin-atet-reason" name="reason" rows="3" required placeholder="Describe por qué se realiza este cambio"></textarea><p class="registration-field__error" data-error="reason" role="alert"></p></div>
+      </div>
+      <footer class="admin-user-modal__footer"><p class="admin-user-form__status" role="status" aria-live="polite"></p><button class="registration-action registration-action--secondary" data-modal-cancel type="button">Cancelar</button><button class="registration-action registration-action--primary" type="submit">${isEdit ? "Guardar corrección" : `Confirmar ${nextStatus === "Inactivo" ? "desactivación" : "activación"}`}</button></footer>
+    </form>`;
+    container.append(dialog);
+    const form = dialog.querySelector("form");
+    const close = () => { dialog.close(); dialog.remove(); };
+    dialog.querySelector(".admin-user-modal__close").addEventListener("click", close);
+    dialog.querySelector("[data-modal-cancel]").addEventListener("click", close);
+    dialog.addEventListener("click", (event) => { if (event.target === dialog) close(); });
+    dialog.addEventListener("cancel", (event) => { event.preventDefault(); close(); });
+    form.addEventListener("input", (event) => {
+      const error = form.querySelector(`[data-error="${event.target.name}"]`);
+      event.target.classList.remove("is-invalid"); event.target.setAttribute("aria-invalid", "false"); if (error) error.textContent = "";
+    });
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const values = Object.fromEntries(new FormData(form));
+      const errors = { reason: values.reason?.trim() ? "" : "Escribe el motivo obligatorio." };
+      if (isEdit) {
+        errors.name = values.name.trim() ? "" : "Ingresa los nombres y apellidos.";
+        const duplicateDni = records.some((item) => item.codigo !== record.codigo && (current[item.codigo]?.dni || item.dni) === values.dni);
+        errors.dni = /^\d{8}$/.test(values.dni) ? duplicateDni ? "El DNI demo pertenece a otro ATET." : "" : "Ingresa exactamente 8 dígitos.";
+        errors.order = values.order.trim() ? "" : "Ingresa la orden de servicio.";
+      }
+      let firstInvalid = null;
+      Object.entries(errors).forEach(([field, message]) => { const control = form.elements.namedItem(field); const error = form.querySelector(`[data-error="${field}"]`); control.classList.toggle("is-invalid", Boolean(message)); control.setAttribute("aria-invalid", String(Boolean(message))); error.textContent = message; if (message && !firstInvalid) firstInvalid = control; });
+      if (firstInvalid) { form.querySelector(".admin-user-form__status").textContent = "Corrige los campos indicados antes de guardar."; firstInvalid.focus(); return; }
+      if (isEdit) {
+        current[record.codigo] = { ...previous, nombre: values.name.trim(), dni: values.dni, ordenServicio: values.order.trim() };
+        global.DEMO_STORE.recordAudit({ entidad: "ATET", entidadId: record.codigo, accion: "corregir", detalle: values.reason.trim(), anterior: { nombre: previous.nombre, dni: previous.dni, ordenServicio: previous.ordenServicio }, nuevo: { nombre: values.name.trim(), dni: values.dni, ordenServicio: values.order.trim() }, nivel: "advertencia" });
+      } else {
+        current[record.codigo] = { ...previous, estado: nextStatus };
+        global.DEMO_STORE.recordAudit({ entidad: "ATET", entidadId: record.codigo, accion: "cambiar-estado", detalle: values.reason.trim(), anterior: previous.estado, nuevo: nextStatus, nivel: "advertencia" });
+      }
+      write(atetStateKey, current); close(); renderAtet(container);
+    });
+    dialog.showModal();
+    form.elements.namedItem(isEdit ? "name" : "reason").focus();
+  }
+
   async function renderAtet(container) {
     const [, personal] = await loadData();
     const state = atetState();
     const records = [...personal.atets, ...global.DEMO_STORE.getRegistrations()];
-    container.innerHTML = `${notice()}${table(["Código", "Nombre", "DNI", "Orden de servicio", "Estado", "Acciones"], records.map((item) => { const local = state[item.codigo] || {}; const status = local.estado || "Activo"; return `<tr><td>${escape(item.codigo)}</td><td>${escape(local.nombre || item.nombresApellidos || item.nombreCompleto)}</td><td>${escape(item.dni)}</td><td>${escape(item.ordenServicio)}</td><td><span class="admin-badge admin-badge--${status === "Activo" ? "ok" : "off"}">${status}</span></td><td><div class="admin-row-actions"><button type="button" data-admin-atet="edit" data-id="${escape(item.codigo)}">Corregir</button><button type="button" data-admin-atet="toggle" data-id="${escape(item.codigo)}">${status === "Activo" ? "Desactivar" : "Activar"}</button></div></td></tr>`; }))}`;
-    container.onclick = (event) => { const button = event.target.closest("[data-admin-atet]"); if (!button) return; const item = records.find((record) => record.codigo === button.dataset.id); if (!item) return; const current = atetState(); const previous = current[item.codigo] || { estado: "Activo", nombre: item.nombresApellidos || item.nombreCompleto };
-      if (button.dataset.adminAtet === "edit") { const reason = global.prompt("Motivo obligatorio de la corrección:"); if (!reason?.trim()) return; const name = global.prompt("Nombre corregido (demo):", previous.nombre); if (!name?.trim()) return; current[item.codigo] = { ...previous, nombre: name.trim() }; global.DEMO_STORE.recordAudit({ entidad: "ATET", entidadId: item.codigo, accion: "corregir", detalle: `${reason.trim()} Nombre actualizado en la demo.`, anterior: previous.nombre, nuevo: name.trim(), nivel: "advertencia" }); }
-      else { const reason = global.prompt("Motivo obligatorio del cambio de estado:"); if (!reason?.trim()) return; const next = previous.estado === "Activo" ? "Inactivo" : "Activo"; current[item.codigo] = { ...previous, estado: next }; global.DEMO_STORE.recordAudit({ entidad: "ATET", entidadId: item.codigo, accion: "cambiar-estado", detalle: `${reason.trim()} Estado: ${previous.estado} → ${next}.`, anterior: previous.estado, nuevo: next, nivel: "advertencia" }); }
-      write(atetStateKey, current); renderAtet(container);
-    };
+    container.innerHTML = `${notice()}${table(["Código", "Nombre", "DNI", "Orden de servicio", "Estado", "Acciones"], records.map((item) => { const local = state[item.codigo] || {}; const status = local.estado || "Activo"; return `<tr><td>${escape(item.codigo)}</td><td>${escape(local.nombre || item.nombresApellidos || item.nombreCompleto)}</td><td>${escape(local.dni || item.dni)}</td><td>${escape(local.ordenServicio || item.ordenServicio)}</td><td><span class="admin-badge admin-badge--${status === "Activo" ? "ok" : "off"}">${status}</span></td><td><div class="admin-row-actions"><button type="button" data-admin-atet="edit" data-id="${escape(item.codigo)}">Corregir</button><button type="button" data-admin-atet="toggle" data-id="${escape(item.codigo)}">${status === "Activo" ? "Desactivar" : "Activar"}</button></div></td></tr>`; }))}`;
+    container.onclick = (event) => { const button = event.target.closest("[data-admin-atet]"); if (!button) return; const item = records.find((record) => record.codigo === button.dataset.id); if (!item) return; openAtetModal(container, item, records, button.dataset.adminAtet); };
     activateAdminPagination(container);
   }
 
