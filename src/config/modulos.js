@@ -82,7 +82,7 @@
     },
     "dashboard-admin": { title: "Panel de Administración", description: "Vista general operativa de la demostración y sus registros." },
     "usuarios-admin": { title: "Usuarios", description: "Administra usuarios y accesos ficticios de la demostración." },
-    "macros-admin": { title: "Macros", description: "Consulta grupos Macro y sus ATET asignados." },
+    "macros-admin": { title: "Macros y asignación de ATET", description: "Crea y administra la asignación de grupos y cupos de ATET para cada Macro." },
     "atet-admin": { title: "Administración de ATET", description: "Corrige o desactiva registros demo con trazabilidad." },
     "roles-permisos-admin": { title: "Roles y permisos", description: "Consulta el flujo de trabajo y la matriz de permisos de cada rol." },
     "parametros-admin": { title: "Parámetros generales", description: "Consulta los catálogos y los ocho productos configurados." },

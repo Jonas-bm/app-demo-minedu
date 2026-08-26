@@ -1605,6 +1605,7 @@ button, a { font: inherit; }
 .admin-products { display: grid; gap: 0.8rem; padding-left: 1.4rem; }
 .admin-products li { padding-left: 0.3rem; }.admin-products strong, .admin-products span { display: block; }.admin-products span { margin-top: 0.25rem; line-height: 1.5; }
 .admin-user-modal { width: min(92vw, 860px); max-height: min(90vh, 820px); padding: 0; border: 0; border-radius: 14px; background: #fff; color: var(--text); box-shadow: 0 24px 70px rgba(5, 18, 37, 0.32); overflow: hidden; }
+.admin-user-modal.has-portaled-select { overflow: visible; }
 .admin-user-modal::backdrop { background: rgba(5, 18, 37, 0.62); backdrop-filter: blur(2px); }
 .admin-user-form { display: grid; max-height: min(90vh, 820px); grid-template-rows: auto minmax(0, 1fr) auto; }
 .admin-user-modal__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); }

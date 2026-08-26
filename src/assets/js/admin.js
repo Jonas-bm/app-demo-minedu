@@ -1,6 +1,7 @@
 (function configureAdminModule(global) {
   const usersKey = "demoAdminUsers";
   const atetStateKey = "demoAdminAtetState";
+  const macroAssignmentsKey = "demoMacroAssignments";
   let dataPromise;
 
   const seedUsers = [
@@ -8,6 +9,11 @@
     { id: "USR-002", usuario: "gestor.demo", nombre: "Gestor Demo", rol: "Gestor de la Información", estado: "Activo" },
     { id: "USR-003", usuario: "jefe.demo", nombre: "Jefe Demo", rol: "Jefe", estado: "Activo" },
     { id: "USR-004", usuario: "admin.demo", nombre: "Administrador Demo", rol: "Administrador", estado: "Activo" }
+  ];
+  const seedMacroAssignments = [
+    { id: "ASG-001", macroId: "USR-001", macro: "Macro Demo", group: "Grupo 01", regionId: "reg-amazonas", assigned: 50, status: "Activo" },
+    { id: "ASG-002", macroId: "macro-norte-demo", macro: "Macro Norte Demo", group: "Grupo 02", regionId: "reg-loreto", assigned: 40, status: "Activo" },
+    { id: "ASG-003", macroId: "macro-centro-demo", macro: "Macro Centro Demo", group: "Grupo 03", regionId: "reg-lima", assigned: 35, status: "Activo" }
   ];
 
   function loadData() {
@@ -26,6 +32,7 @@
 
   function write(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
   function users() { return read(usersKey, seedUsers).map((item) => ({ ...item, rol: item.rol === "Administrador" && item.usuario !== "admin.demo" ? "Jefe" : item.rol })); }
+  function macroAssignments() { return read(macroAssignmentsKey, seedMacroAssignments); }
   function atetState() { return read(atetStateKey, {}); }
   function escape(value) { return String(value ?? "—").replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char])); }
   function date(value) { const parsed = new Date(value); return Number.isNaN(parsed.getTime()) ? "—" : new Intl.DateTimeFormat("es-PE", { dateStyle: "short", timeStyle: "short" }).format(parsed); }
@@ -106,6 +113,7 @@
     if (entity === "atet") return "atet-admin";
     if (entity === "parametros") return "parametros-admin";
     if (entity === "importaciones") return "atet-admin";
+    if (entity === "asignaciones-macro") return "macros-admin";
     if (entity.includes("macro")) return "macros-admin";
     return "";
   }
@@ -129,6 +137,7 @@
       usuarios: "Usuarios",
       parametros: "Parámetros generales",
       importaciones: "Importaciones",
+      "asignaciones-macro": "Asignación de ATET",
       informe: "Informes",
       "evaluacion-entregable": "Evaluaciones",
       "presentacion-entregable": "Entregables",
@@ -150,7 +159,13 @@
       estado: "Estado",
       year: "Año",
       cantidad: "Cantidad",
-      codigos: "Códigos"
+      codigos: "Códigos",
+      macroId: "Código del Macro",
+      macro: "Macro",
+      group: "Grupo",
+      regionId: "Región",
+      assigned: "ATET asignados",
+      status: "Estado"
     };
     return labels[key] || String(key).replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (letter) => letter.toUpperCase());
   }
@@ -279,14 +294,61 @@
     activateAdminPagination(container);
   }
 
+  function openMacroAssignmentModal(container, assignment, assignments, regions) {
+    const editing = Boolean(assignment);
+    const macroUsers = users().filter((item) => item.rol === "Macro" && item.estado === "Activo");
+    if (editing && !macroUsers.some((item) => item.id === assignment.macroId)) macroUsers.push({ id: assignment.macroId, nombre: assignment.macro, estado: assignment.status, rol: "Macro" });
+    const selectableMacros = editing ? macroUsers : macroUsers.filter((item) => !assignments.some((current) => current.macroId === item.id && current.status === "Activo"));
+    const availableMacros = selectableMacros.length > 0;
+    const dialog = document.createElement("dialog");
+    dialog.className = "admin-user-modal admin-assignment-modal";
+    dialog.innerHTML = `<form class="admin-user-form" method="dialog" novalidate><header class="admin-user-modal__header"><div><h3>${editing ? "Editar asignación de ATET" : "Asignar grupo de ATET"}</h3><p>Define el grupo y la cantidad asignada al Macro; no se seleccionan ATET uno por uno.</p></div><button class="admin-user-modal__close" type="button" aria-label="Cerrar">×</button></header><div class="admin-user-modal__body"><p class="registration-form__note"><strong>Responsabilidad del Administrador:</strong> administra el cupo del grupo. El Macro recibe el grupo y gestiona sus registros.</p><div class="admin-user-form__grid"><div class="registration-field"><label for="assignment-macro">Macro *</label><select id="assignment-macro" name="macro" ${editing ? "disabled" : ""} required><option value="">Seleccionar Macro</option>${selectableMacros.map((item) => `<option value="${escape(item.id)}" ${assignment?.macroId === item.id ? "selected" : ""}>${escape(item.nombre)}</option>`).join("")}</select><p class="registration-field__error" data-error="macro"></p></div><div class="registration-field"><label for="assignment-region">Región *</label><select id="assignment-region" name="region" required><option value="">Seleccionar región</option>${regions.map((item) => `<option value="${escape(item.id)}" ${assignment?.regionId === item.id ? "selected" : ""}>${escape(item.nombre)}</option>`).join("")}</select><p class="registration-field__error" data-error="region"></p></div><div class="registration-field"><label for="assignment-group">Nombre del grupo *</label><input id="assignment-group" name="group" value="${escape(assignment?.group || `Grupo ${String(assignments.length + 1).padStart(2, "0")}`)}" required><p class="registration-field__error" data-error="group"></p></div><div class="registration-field"><label for="assignment-quantity">Cantidad de ATET asignados *</label><input id="assignment-quantity" name="quantity" type="number" min="1" max="9999" step="1" value="${escape(assignment?.assigned || "")}" required><p class="registration-field__error" data-error="quantity"></p></div><div class="registration-field"><label for="assignment-status">Estado *</label><select id="assignment-status" name="status" required><option ${assignment?.status !== "Inactivo" ? "selected" : ""}>Activo</option><option ${assignment?.status === "Inactivo" ? "selected" : ""}>Inactivo</option></select><p class="registration-field__error" data-error="status"></p></div></div>${!availableMacros && !editing ? '<p class="atet-state atet-state--error">No existen Macros activos sin una asignación vigente. Crea o activa un usuario Macro antes de continuar.</p>' : ""}</div><footer class="admin-user-modal__footer"><p class="admin-user-form__status" role="status"></p><button class="registration-action registration-action--secondary" data-modal-cancel type="button">Cancelar</button><button class="registration-action registration-action--primary" type="submit" ${!availableMacros ? "disabled" : ""}>${editing ? "Guardar cambios" : "Asignar grupo"}</button></footer></form>`;
+    container.append(dialog);
+    const form = dialog.querySelector("form");
+    const close = () => { dialog.close(); dialog.remove(); };
+    dialog.querySelector(".admin-user-modal__close").addEventListener("click", close);
+    dialog.querySelector("[data-modal-cancel]").addEventListener("click", close);
+    dialog.addEventListener("cancel", (event) => { event.preventDefault(); close(); });
+    dialog.addEventListener("click", (event) => { if (event.target === dialog) close(); });
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const values = Object.fromEntries(new FormData(form));
+      const macroId = editing ? assignment.macroId : values.macro;
+      const macro = macroUsers.find((item) => item.id === macroId);
+      const quantity = Number(values.quantity);
+      const errors = { macro: macro ? "" : "Selecciona un Macro activo.", region: regions.some((item) => item.id === values.region) ? "" : "Selecciona una región.", group: values.group?.trim() ? "" : "Ingresa el nombre del grupo.", quantity: Number.isInteger(quantity) && quantity > 0 && quantity <= 9999 ? "" : "Ingresa una cantidad entre 1 y 9999.", status: ["Activo", "Inactivo"].includes(values.status) ? "" : "Selecciona el estado." };
+      let invalid;
+      Object.entries(errors).forEach(([name, message]) => { const control = form.elements.namedItem(name); const error = form.querySelector(`[data-error="${name}"]`); if (control) control.classList.toggle("is-invalid", Boolean(message)); if (error) error.textContent = message; if (message && !invalid) invalid = control; });
+      if (invalid) { invalid.focus(); return; }
+      const duplicateMacro = assignments.some((item) => item.id !== assignment?.id && item.macroId === macroId && item.status === "Activo" && values.status === "Activo");
+      const duplicateGroup = assignments.some((item) => item.id !== assignment?.id && item.group.toLocaleLowerCase("es") === values.group.trim().toLocaleLowerCase("es"));
+      if (duplicateMacro || duplicateGroup) { form.querySelector(".admin-user-form__status").textContent = duplicateMacro ? "Este Macro ya tiene un grupo activo asignado." : "Ya existe una asignación con ese nombre de grupo."; return; }
+      const next = { id: assignment?.id || `ASG-${String(Math.max(0, ...assignments.map((item) => Number(item.id.replace(/\D/g, "")) || 0)) + 1).padStart(3, "0")}`, macroId, macro: macro?.nombre || assignment.macro, group: values.group.trim(), regionId: values.region, assigned: quantity, status: values.status };
+      const previous = assignment ? { ...assignment } : null;
+      if (editing) assignments[assignments.findIndex((item) => item.id === assignment.id)] = next; else assignments.push(next);
+      write(macroAssignmentsKey, assignments);
+      global.DEMO_STORE.recordAudit({ entidad: "asignaciones-macro", entidadId: next.id, accion: editing ? "actualizar" : "crear", detalle: `${editing ? "Actualizó" : "Asignó"} ${next.group} con ${next.assigned} ATET a ${next.macro}.`, anterior: previous, nuevo: next, nivel: "exito" });
+      close();
+      renderMacros(container);
+    });
+    dialog.showModal();
+  }
+
   async function renderMacros(container) {
-    const [, personal] = await loadData();
-    const groups = [
-      { macro: "Macro Demo", group: "Grupo 01", region: "Amazonas", assigned: personal.atets.length, status: "Activo" },
-      { macro: "Macro Norte Demo", group: "Grupo 02", region: "Lima", assigned: 45, status: "Activo" },
-      { macro: "Macro Sur Demo", group: "Grupo 03", region: "Cusco", assigned: 48, status: "Activo" }
-    ];
-    container.innerHTML = `${notice()}${table(["Macro", "Grupo", "Región", "ATET asignados", "Estado"], groups.map((item) => `<tr><td>${escape(item.macro)}</td><td>${escape(item.group)}</td><td>${escape(item.region)}</td><td>${item.assigned}</td><td><span class="admin-badge admin-badge--ok">${item.status}</span></td></tr>`))}<p class="admin-help">Las asignaciones adicionales son datos ficticios para visualizar el módulo administrativo.</p>`;
+    const [, personal, catalogs] = await loadData();
+    const assignments = macroAssignments();
+    const allAtets = [...personal.atets, ...global.DEMO_STORE.getRegistrations()];
+    const regionMap = new Map(catalogs.regiones.map((item) => [item.id, item.nombre]));
+    const rows = assignments.map((item) => {
+      const registered = Math.min(item.assigned, allAtets.filter((atet) => atet.regionId === item.regionId).length);
+      return { ...item, region: regionMap.get(item.regionId) || item.regionId, registered, pending: Math.max(0, item.assigned - registered) };
+    });
+    const totalAssigned = rows.filter((item) => item.status === "Activo").reduce((sum, item) => sum + item.assigned, 0);
+    const totalRegistered = rows.filter((item) => item.status === "Activo").reduce((sum, item) => sum + item.registered, 0);
+    container.innerHTML = `${notice()}<div class="admin-toolbar"><div><strong>Asignación de ATET por grupos</strong><p class="admin-help">El Administrador asigna cupos grupales; no selecciona cada ATET individualmente.</p></div><button class="registration-action registration-action--primary" data-assignment-add type="button">Asignar grupo</button></div><div class="admin-cards admin-assignment-summary">${card("Grupos activos", rows.filter((item) => item.status === "Activo").length, "Asignaciones vigentes")}${card("ATET asignados", totalAssigned, "Cupo total")}${card("Registrados", totalRegistered, "ATET vinculados por región")}${card("Pendientes", Math.max(0, totalAssigned - totalRegistered), "Por completar registro")}</div>${table(["Macro", "Región", "Grupo", "ATET asignados", "Registrados", "Pendientes", "Estado", "Acciones"], rows.map((item) => `<tr><td>${escape(item.macro)}</td><td>${escape(item.region)}</td><td>${escape(item.group)}</td><td><strong>${item.assigned}</strong></td><td>${item.registered}</td><td>${item.pending}</td><td><span class="admin-badge admin-badge--${item.status === "Activo" ? "ok" : "off"}">${escape(item.status)}</span></td><td><div class="admin-row-actions"><button type="button" data-assignment-edit="${escape(item.id)}">Editar</button></div></td></tr>`))}<p class="admin-help">Los valores registrados se calculan con los ATET existentes en la región del grupo.</p>`;
+    container.querySelector("[data-assignment-add]").addEventListener("click", () => openMacroAssignmentModal(container, null, assignments, catalogs.regiones));
+    container.onclick = (event) => { const button = event.target.closest("[data-assignment-edit]"); if (!button) return; const item = assignments.find((current) => current.id === button.dataset.assignmentEdit); if (item) openMacroAssignmentModal(container, item, assignments, catalogs.regiones); };
+    activateAdminPagination(container);
   }
 
   function openAtetModal(container, record, records, mode) {
@@ -386,7 +448,7 @@
         <article class="role-flow-card role-flow-card--macro"><header><span>M</span><div><h4>Macro</h4><p>Registro y evaluación</p></div></header><ol><li><strong>Registra ATET</strong><span>Registra manualmente o importa los ATET de su grupo.</span></li><li><strong>Registra presentación</strong><span>Consigna la fecha del entregable presentado externamente.</span></li><li><strong>Revisa el PDF externo</strong><span>Realiza la revisión física fuera del Sistema ATET.</span></li><li><strong>Evalúa los 8 productos</strong><span>Marca Cumple/No cumple, análisis y páginas.</span></li></ol></article>
         <article class="role-flow-card role-flow-card--manager"><header><span>G</span><div><h4>Gestor</h4><p>Control e informes</p></div></header><ol><li><strong>Verifica la información</strong><span>Consulta la evaluación registrada por el Macro.</span></li><li><strong>Genera el informe</strong><span>Usa la evaluación sin volver a revisar el PDF.</span></li><li><strong>Conforme u observado</strong><span>Emite el informe demo correspondiente.</span></li></ol></article>
         <article class="role-flow-card role-flow-card--boss"><header><span>J</span><div><h4>Jefe</h4><p>Estadísticas y consultas</p></div></header><ol><li><strong>Indicadores ejecutivos</strong><span>Consulta avance, resultados e informes.</span></li><li><strong>Supervisión</strong><span>Acceso de solo lectura a información consolidada.</span></li></ol></article>
-      </div><p class="registration-form__note roles-admin-note"><strong>Administrador:</strong> mantiene usuarios, ATET, parámetros y auditoría; no participa en la revisión ni generación de informes.</p></section>
+      </div><p class="registration-form__note roles-admin-note"><strong>Administrador:</strong> configura el sistema, crea usuarios, activa Macros y Gestores, asigna grupos y cupos de ATET a cada Macro, mantiene parámetros y controla la auditoría. No revisa entregables ni genera informes.</p></section>
       <section class="roles-matrix admin-panel"><div class="roles-section-heading"><h3>Matriz de permisos por rol</h3><p>Permisos efectivos según los módulos implementados.</p></div><div class="admin-table-wrap" data-admin-paged-table><table class="admin-table roles-permission-table"><thead><tr><th>Área</th><th>Módulo / funcionalidad</th><th>Administrador</th><th>Macro</th><th>Gestor</th><th>Jefe</th></tr></thead><tbody>${matrixRows.join("")}</tbody></table></div><div class="roles-legend"><span>${permissionCell("yes").replace(/^<td>|<\/td>$/g, "")} Permitido</span><span>${permissionCell("partial").replace(/^<td>|<\/td>$/g, "")} Parcial</span><span>${permissionCell("no").replace(/^<td>|<\/td>$/g, "")} No permitido</span></div></section>
     </div>`;
     activateAdminPagination(container);

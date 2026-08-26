@@ -5,10 +5,12 @@
   function close(control, restoreFocus = false) {
     if (!control) return;
     if (control.portaled) {
+      control.portalHost?.classList.remove("has-portaled-select");
       control.list.classList.remove("is-portaled");
       control.list.removeAttribute("style");
       control.wrapper.append(control.list);
       control.portaled = false;
+      control.portalHost = null;
     }
     control.wrapper.classList.remove("is-open");
     control.trigger.setAttribute("aria-expanded", "false");
@@ -57,13 +59,16 @@
     if (control.trigger.disabled) return;
     if (opened && opened !== control) close(opened);
     rebuild(control);
-    if (control.select.closest("dialog")) {
+    const dialog = control.select.closest("dialog");
+    if (dialog) {
       const rect = control.trigger.getBoundingClientRect();
       const availableBelow = global.innerHeight - rect.bottom;
       const estimatedHeight = Math.min(280, (control.select.options.length * 40) + 12);
       const openAbove = availableBelow < estimatedHeight + 12 && rect.top > availableBelow;
       control.portaled = true;
-      document.body.append(control.list);
+      control.portalHost = dialog;
+      dialog.classList.add("has-portaled-select");
+      dialog.append(control.list);
       control.list.classList.add("is-portaled");
       control.list.style.left = `${rect.left}px`;
       control.list.style.width = `${rect.width}px`;
