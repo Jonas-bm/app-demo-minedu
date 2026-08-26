@@ -123,12 +123,52 @@
     return String(name || "U").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
   }
 
+  function auditModuleLabel(entity) {
+    const labels = {
+      ATET: "ATET",
+      usuarios: "Usuarios",
+      parametros: "Parámetros generales",
+      importaciones: "Importaciones",
+      informe: "Informes",
+      "evaluacion-entregable": "Evaluaciones",
+      "presentacion-entregable": "Entregables",
+      sesión: "Sesión"
+    };
+    return labels[entity] || String(entity || "Sistema").replaceAll("-", " ");
+  }
+
+  function auditRecordLabel(item) {
+    if (item.entidadId === "anio-catalogo-entregable") return "Año del catálogo";
+    return item.entidadId || "—";
+  }
+
+  function auditFieldLabel(key) {
+    const labels = {
+      nombre: "Nombre",
+      dni: "DNI",
+      ordenServicio: "Orden de servicio",
+      estado: "Estado",
+      year: "Año",
+      cantidad: "Cantidad",
+      codigos: "Códigos"
+    };
+    return labels[key] || String(key).replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (letter) => letter.toUpperCase());
+  }
+
+  function auditValueHtml(value) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return `<div class="audit-value-fields">${Object.entries(value).map(([key, fieldValue]) => `<div><span>${escape(auditFieldLabel(key))}</span><strong>${escape(Array.isArray(fieldValue) ? fieldValue.join(", ") : fieldValue)}</strong></div>`).join("")}</div>`;
+    }
+    if (Array.isArray(value)) return `<p class="audit-value-text">${escape(value.join(", "))}</p>`;
+    return `<p class="audit-value-text">${escape(value)}</p>`;
+  }
+
   function renderAuditTable(entries) {
     if (!entries.length) return '<p class="atet-state">Aún no hay eventos locales. Las operaciones nuevas aparecerán aquí.</p>';
     return `<div class="admin-table-wrap audit-table-wrap" data-admin-paged-table><table class="admin-table audit-table"><thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Rol</th><th>Módulo</th><th>Acción</th><th>Descripción</th><th>Registro afectado</th><th>Detalle</th></tr></thead><tbody>${entries.map((item, index) => {
       const route = auditRoute(item);
-      const record = escape(item.entidadId || "—");
-      return `<tr><td>${escape(date(item.fecha))}</td><td><span class="audit-user"><span class="audit-user__avatar">${escape(initials(item.usuario))}</span>${escape(item.usuario)}</span></td><td>${escape(item.rol || "Demo")}</td><td>${escape(item.entidad)}</td><td><span class="audit-action audit-action--${actionKind(item.accion)}">${escape(item.accion)}</span></td><td class="audit-description">${escape(item.detalle)}</td><td>${route ? `<a class="audit-record-link" href="#${route}" title="Abrir módulo relacionado">${record}</a>` : `<span class="audit-record-code">${record}</span>`}</td><td><button class="audit-detail-button" type="button" data-audit-detail="${index}" aria-label="Ver detalle de ${record}">Ver</button></td></tr>`;
+      const record = escape(auditRecordLabel(item));
+      return `<tr><td class="audit-date">${escape(date(item.fecha))}</td><td><span class="audit-user"><span class="audit-user__avatar">${escape(initials(item.usuario))}</span>${escape(item.usuario)}</span></td><td class="audit-role">${escape(item.rol || "Demo")}</td><td class="audit-module">${escape(auditModuleLabel(item.entidad))}</td><td><span class="audit-action audit-action--${actionKind(item.accion)}">${escape(item.accion)}</span></td><td class="audit-description">${escape(item.detalle)}</td><td class="audit-record">${route ? `<a class="audit-record-link" href="#${route}" title="Abrir ${escape(auditModuleLabel(item.entidad))}">${record}</a>` : `<span class="audit-record-code">${record}</span>`}</td><td><button class="audit-detail-button" type="button" data-audit-detail="${index}" aria-label="Ver detalle de ${record}">Ver</button></td></tr>`;
     }).join("")}</tbody></table></div>`;
   }
 
@@ -364,6 +404,10 @@
       const previousYear = global.DEMO_EVALUATION_CONFIG.year;
       try {
         const newYear = global.DEMO_EVALUATION_CONFIG.setYear(input.value);
+        if (newYear === previousYear) {
+          input.focus();
+          return;
+        }
         global.DEMO_STORE.recordAudit({ entidad: "parametros", entidadId: "anio-catalogo-entregable", accion: "actualizar", detalle: `Actualizó el año de los materiales educativos digitales de ${previousYear} a ${newYear}.`, nivel: "exito", anterior: { year: previousYear }, nuevo: { year: newYear } });
         renderParameters(container);
       } catch (error) {
@@ -375,7 +419,11 @@
   }
 
   function renderAudit(container, logMode) {
-    let entries = global.DEMO_STORE.getAudit().slice().reverse();
+    let entries = global.DEMO_STORE.getAudit().filter((item) => {
+      const isCatalogYear = item.entidad === "parametros" && item.entidadId === "anio-catalogo-entregable";
+      if (!isCatalogYear || item.anterior === null || item.anterior === undefined || item.nuevo === null || item.nuevo === undefined) return true;
+      return JSON.stringify(item.anterior) !== JSON.stringify(item.nuevo);
+    }).slice().reverse();
     if (logMode) {
       const simulated = [
         { fecha: new Date().toISOString(), usuario: "Sistema Demo", rol: "Sistema", entidad: "sesión", accion: "inicio", detalle: "Aplicación estática iniciada correctamente.", nivel: "exito" },
@@ -385,7 +433,8 @@
     }
     const unique = (field) => [...new Set(entries.map((item) => item[field] || "Demo"))].sort((a, b) => String(a).localeCompare(String(b), "es"));
     const options = (values) => values.map((value) => `<option value="${escape(value)}">${escape(value)}</option>`).join("");
-    container.innerHTML = `${notice()}<section class="audit-filters" aria-label="Filtros del historial"><div class="audit-filter-grid"><label>Fecha inicio<input data-audit-start type="date"></label><label>Fecha fin<input data-audit-end type="date"></label><label>Usuario<select data-audit-user><option value="">Todos</option>${options(unique("usuario"))}</select></label><label>Rol<select data-audit-role><option value="">Todos</option>${options(unique("rol"))}</select></label><label>Módulo<select data-audit-module><option value="">Todos</option>${options(unique("entidad"))}</select></label><label>Acción<select data-audit-action><option value="">Todas</option>${options(unique("accion"))}</select></label><label class="audit-filter-search">Buscar por descripción o registro<input data-audit-search type="search" placeholder="Ej. ATET-001, informe, usuario…"></label></div><div class="audit-filter-actions"><div><button class="registration-action registration-action--secondary" data-audit-clear type="button">Limpiar filtros</button><button class="registration-action registration-action--primary" data-audit-submit type="button">Buscar</button></div><button class="registration-action registration-action--secondary" data-export-events type="button">Exportar CSV</button></div></section><div class="audit-results-heading"><span data-audit-count>${entries.length} registros encontrados</span><small>Los códigos azules abren el módulo relacionado.</small></div><div data-admin-events></div>`;
+    const moduleOptions = unique("entidad").map((value) => `<option value="${escape(value)}">${escape(auditModuleLabel(value))}</option>`).join("");
+    container.innerHTML = `${notice()}<section class="audit-filters" aria-label="Filtros del historial"><div class="audit-filter-grid"><label>Fecha inicio<input data-audit-start type="date"></label><label>Fecha fin<input data-audit-end type="date"></label><label>Usuario<select data-audit-user><option value="">Todos</option>${options(unique("usuario"))}</select></label><label>Rol<select data-audit-role><option value="">Todos</option>${options(unique("rol"))}</select></label><label>Módulo<select data-audit-module><option value="">Todos</option>${moduleOptions}</select></label><label>Acción<select data-audit-action><option value="">Todas</option>${options(unique("accion"))}</select></label><label class="audit-filter-search">Buscar por descripción o registro<input data-audit-search type="search" placeholder="Ej. ATET-001, informe, usuario…"></label></div><div class="audit-filter-actions"><div><button class="registration-action registration-action--secondary" data-audit-clear type="button">Limpiar filtros</button><button class="registration-action registration-action--primary" data-audit-submit type="button">Buscar</button></div><button class="registration-action registration-action--secondary" data-export-events type="button">Exportar CSV</button></div></section><div class="audit-results-heading"><span data-audit-count>${entries.length} registros encontrados</span><small>Los códigos azules abren el módulo relacionado.</small></div><div data-admin-events></div>`;
     let filteredEntries = entries;
     const results = container.querySelector("[data-admin-events]");
     function applyFilters() {
@@ -415,7 +464,7 @@
       if (!item) return;
       const dialog = document.createElement("dialog");
       dialog.className = "admin-user-modal audit-detail-modal";
-      dialog.innerHTML = `<article><header class="admin-user-modal__header"><div><h3>Detalle de la actividad</h3><p>${escape(item.entidadId || "Registro demo")}</p></div><button class="admin-user-modal__close" type="button" aria-label="Cerrar">×</button></header><div class="admin-user-modal__body"><dl class="audit-detail-list"><div><dt>Fecha y hora</dt><dd>${escape(date(item.fecha))}</dd></div><div><dt>Usuario y rol</dt><dd>${escape(item.usuario)} · ${escape(item.rol || "Demo")}</dd></div><div><dt>Módulo</dt><dd>${escape(item.entidad)}</dd></div><div><dt>Acción</dt><dd>${escape(item.accion)}</dd></div><div><dt>Descripción</dt><dd>${escape(item.detalle)}</dd></div>${item.anterior !== null && item.anterior !== undefined ? `<div><dt>Valor anterior</dt><dd><pre>${escape(typeof item.anterior === "object" ? JSON.stringify(item.anterior, null, 2) : item.anterior)}</pre></dd></div>` : ""}${item.nuevo !== null && item.nuevo !== undefined ? `<div><dt>Valor nuevo</dt><dd><pre>${escape(typeof item.nuevo === "object" ? JSON.stringify(item.nuevo, null, 2) : item.nuevo)}</pre></dd></div>` : ""}</dl></div></article>`;
+      dialog.innerHTML = `<article><header class="admin-user-modal__header"><div><h3>Detalle de la actividad</h3><p>${escape(auditRecordLabel(item))}</p></div><button class="admin-user-modal__close" type="button" aria-label="Cerrar">×</button></header><div class="admin-user-modal__body"><dl class="audit-detail-list"><div><dt>Fecha y hora</dt><dd>${escape(date(item.fecha))}</dd></div><div><dt>Usuario y rol</dt><dd>${escape(item.usuario)} · ${escape(item.rol || "Demo")}</dd></div><div><dt>Módulo</dt><dd>${escape(auditModuleLabel(item.entidad))}</dd></div><div><dt>Acción</dt><dd>${escape(item.accion)}</dd></div><div><dt>Descripción</dt><dd>${escape(item.detalle)}</dd></div>${item.anterior !== null && item.anterior !== undefined ? `<div><dt>Valor anterior</dt><dd>${auditValueHtml(item.anterior)}</dd></div>` : ""}${item.nuevo !== null && item.nuevo !== undefined ? `<div><dt>Valor nuevo</dt><dd>${auditValueHtml(item.nuevo)}</dd></div>` : ""}</dl></div></article>`;
       document.body.append(dialog);
       const close = () => { dialog.close(); dialog.remove(); };
       dialog.querySelector("button").addEventListener("click", close);
