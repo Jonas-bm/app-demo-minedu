@@ -342,7 +342,7 @@
         form.className = "registration-form deliverable-presentation__form";
         form.noValidate = true;
         note.className = "registration-form__note";
-        note.textContent = "La referencia identifica el documento almacenado en el sistema externo; este campo es provisional para la maqueta.";
+        note.textContent = "El Macro ya revisó el PDF en el sistema externo. Aquí solo registra la presentación para continuar con la evaluación; no se carga ningún archivo.";
         form.append(
           note,
           createSection("Datos del entregable", [
@@ -353,7 +353,7 @@
           ]),
           createSection("Datos de la presentación", [
             createField({ id: "presentation-date", labelText: "Fecha de presentación (obligatoria)", type: "date", required: true }),
-            createField({ id: "presentation-reference", labelText: "Referencia externa provisional (obligatoria)", required: true }),
+            createField({ id: "presentation-reference", labelText: "Referencia externa (opcional en la demo)" }),
             createField({ id: "presentation-observations", labelText: "Observaciones administrativas", type: "textarea", full: true })
           ])
         );
@@ -363,7 +363,7 @@
         cancel.textContent = "Cancelar";
         save.className = "registration-action registration-action--primary";
         save.type = "submit";
-        save.textContent = "Guardar presentación";
+        save.textContent = "Guardar y continuar con evaluación";
         status.className = "registration-form__status";
         status.setAttribute("role", "status");
         status.setAttribute("aria-live", "polite");
@@ -378,12 +378,7 @@
           const presentationDate = form.elements.namedItem("presentation-date").value;
           const reference = form.elements.namedItem("presentation-reference").value.trim();
           const invalidDate = setError("presentation-date", presentationDate ? "" : "La fecha de presentación es obligatoria.");
-          const invalidReference = setError("presentation-reference", reference ? "" : "La referencia externa es obligatoria.");
-          const firstInvalid = invalidDate
-            ? form.elements.namedItem("presentation-date")
-            : invalidReference
-              ? form.elements.namedItem("presentation-reference")
-              : null;
+          const firstInvalid = invalidDate ? form.elements.namedItem("presentation-date") : null;
           if (firstInvalid) {
             status.textContent = "Corrige los campos indicados antes de guardar.";
             firstInvalid.focus();
@@ -395,13 +390,12 @@
           global.DEMO_STORE.savePresentation({
             entregableId: deliverable.id,
             fecha: presentationDate,
-            referenciaDocumento: reference,
+            referenciaDocumento: reference || "Referencia externa no consignada (demo)",
             observaciones: form.elements.namedItem("presentation-observations").value.trim(),
             registradoEn: new Date().toISOString(),
             registradoPor: JSON.parse(sessionStorage.getItem("demoSession") || "null")?.nombre || "Macro Demo"
           });
-          global.DEMO_STORE.setFlash(`La presentación del entregable N.° ${deliverable.numero} se guardó correctamente.`);
-          global.location.hash = "entregables";
+          global.location.hash = `evaluar-entregable/${encodeURIComponent(deliverable.id)}`;
         });
         wrapper.append(form);
       }

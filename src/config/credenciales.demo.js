@@ -18,5 +18,11 @@ window.DEMO_USERS = [
     contrasena: "demo2026",
     nombre: "Jefe Demo",
     rol: "Jefe"
+  },
+  {
+    usuario: "admin.demo",
+    contrasena: "demo2026",
+    nombre: "Administrador Demo",
+    rol: "Administrador"
   }
 ];

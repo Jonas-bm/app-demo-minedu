@@ -30,7 +30,7 @@
     },
     "evaluar-entregable": {
       title: "Evaluar entregable",
-      description: "Registra la revisión de los ocho criterios de demostración del entregable."
+      description: "Registra el cumplimiento, análisis y páginas de los ocho productos del entregable."
     },
     historial: {
       title: "Historial",
@@ -79,6 +79,13 @@
     "productividad-gestor": {
       title: "Productividad por Gestor",
       description: "Consulta la carga recibida y los informes gestionados por responsable."
-    }
+    },
+    "dashboard-admin": { title: "Panel de Administración", description: "Vista general operativa de la demostración y sus registros." },
+    "usuarios-admin": { title: "Usuarios", description: "Administra usuarios y accesos ficticios de la demostración." },
+    "macros-admin": { title: "Macros", description: "Consulta grupos Macro y sus ATET asignados." },
+    "atet-admin": { title: "Administración de ATET", description: "Corrige o desactiva registros demo con trazabilidad." },
+    "parametros-admin": { title: "Parámetros generales", description: "Consulta los catálogos y los ocho productos configurados." },
+    "auditoria-admin": { title: "Historial de actividades", description: "Consulta las acciones funcionales registradas en la demo." },
+    "bitacora-admin": { title: "Bitácora del sistema", description: "Consulta accesos, procesos, advertencias y errores simulados." }
   });
 })(window);

@@ -4,7 +4,17 @@ const passwordInput = document.querySelector("#contrasena");
 const rememberInput = document.querySelector("#recordar");
 const message = document.querySelector("#form-message");
 const forgotButton = document.querySelector("#forgot-button");
-const demoUsers = Array.isArray(window.DEMO_USERS) ? window.DEMO_USERS : [];
+let locallyCreatedUsers = [];
+try {
+  const savedUsers = JSON.parse(localStorage.getItem("demoAdminUsers") || "[]");
+  if (Array.isArray(savedUsers)) {
+    locallyCreatedUsers = savedUsers.filter((item) => item.estado === "Activo" && item.contrasenaTemporal).map((item) => ({ usuario: item.usuario, contrasena: item.contrasenaTemporal, nombre: item.nombre, rol: item.rol === "Administrador" && item.usuario !== "admin.demo" ? "Jefe" : item.rol }));
+  }
+} catch (error) {
+  console.warn("Se ignoraron usuarios demo locales inválidos.", error);
+}
+const baseDemoUsers = Array.isArray(window.DEMO_USERS) ? window.DEMO_USERS : [];
+const demoUsers = [...baseDemoUsers, ...locallyCreatedUsers.filter((local) => !baseDemoUsers.some((base) => base.usuario === local.usuario))];
 
 const rememberedUser = localStorage.getItem("demoRememberedUser");
 

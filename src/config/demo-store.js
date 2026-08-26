@@ -55,6 +55,8 @@
       entidadId: presentation.entregableId,
       accion: action,
       usuario: presentation.registradoPor || "Macro Demo",
+      rol: "Macro",
+      nivel: "exito",
       fecha: presentation.registradoEn || new Date().toISOString(),
       detalle: `${action === "creacion" ? "Registro" : "Actualización"} de presentación con referencia ${presentation.referenciaDocumento}.`
     });
@@ -72,10 +74,31 @@
     }
   }
 
+  function recordAudit(event) {
+    const audit = getAudit();
+    const session = JSON.parse(sessionStorage.getItem("demoSession") || "null");
+    const entry = {
+      id: event.id || `audit-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      entidad: event.entidad || "sistema",
+      entidadId: event.entidadId || "demo",
+      accion: event.accion || "consulta",
+      usuario: event.usuario || session?.nombre || "Usuario Demo",
+      rol: event.rol || session?.rol || "Demo",
+      fecha: event.fecha || new Date().toISOString(),
+      detalle: event.detalle || "Evento de demostración.",
+      nivel: event.nivel || "informacion",
+      anterior: event.anterior || null,
+      nuevo: event.nuevo || null
+    };
+    audit.push(entry);
+    localStorage.setItem(auditKey, JSON.stringify(audit));
+    return entry;
+  }
+
   function getEvaluationDrafts() {
     try {
       const value = JSON.parse(localStorage.getItem(evaluationDraftsKey) || "[]");
-      return Array.isArray(value) ? value : [];
+      return Array.isArray(value) ? value.filter((item) => !global.DEMO_EVALUATION_CONFIG || item.catalogoVersion === global.DEMO_EVALUATION_CONFIG.version) : [];
     } catch (error) {
       console.warn("Se ignoraron borradores de evaluación inválidos.", error);
       return [];
@@ -99,7 +122,7 @@
   function getEvaluations() {
     try {
       const value = JSON.parse(localStorage.getItem(evaluationsKey) || "[]");
-      return Array.isArray(value) ? value : [];
+      return Array.isArray(value) ? value.filter((item) => !global.DEMO_EVALUATION_CONFIG || item.catalogoVersion === global.DEMO_EVALUATION_CONFIG.version) : [];
     } catch (error) {
       console.warn("Se ignoraron evaluaciones locales inválidas.", error);
       return [];
@@ -126,6 +149,8 @@
       entidadId: evaluation.entregableId,
       accion: action,
       usuario: publishedEvaluation.evaluadoPor || "Macro Demo",
+      rol: "Macro",
+      nivel: publishedEvaluation.resultado === "observada" ? "advertencia" : "exito",
       fecha: publishedEvaluation.evaluadoEn || new Date().toISOString(),
       detalle: `${action === "creacion" ? "Registro y publicación" : "Actualización"} de evaluación con resultado ${publishedEvaluation.resultado}.`
     });
@@ -151,6 +176,12 @@
     if (index >= 0) reports[index] = report;
     else reports.push(report);
     localStorage.setItem(reportsKey, JSON.stringify(reports));
+    const evaluations = getEvaluations();
+    const evaluationIndex = evaluations.findIndex((item) => item.entregableId === report.entregableId);
+    if (evaluationIndex >= 0) {
+      evaluations[evaluationIndex] = { ...evaluations[evaluationIndex], estadoGestion: "informada", informeId: report.id, informadaEn: report.generadoEn };
+      localStorage.setItem(evaluationsKey, JSON.stringify(evaluations));
+    }
     const audit = getAudit();
     audit.push({
       id: `audit-${Date.now()}-${report.id}`,
@@ -158,6 +189,8 @@
       entidadId: report.id,
       accion: action,
       usuario: report.autor || "Gestor Demo",
+      rol: "Gestor de la Información",
+      nivel: "exito",
       fecha: report.generadoEn || new Date().toISOString(),
       detalle: `${action === "creacion" ? "Generación" : "Actualización"} del informe ${report.numero} con estado ${report.estado}.`
     });
@@ -175,5 +208,5 @@
     return message;
   }
 
-  global.DEMO_STORE = Object.freeze({ getRegistrations, addRegistration, addRegistrations, getPresentations, savePresentation, getAudit, getEvaluationDrafts, saveEvaluationDraft, removeEvaluationDraft, getEvaluations, saveEvaluation, getReports, saveReport, setFlash, takeFlash });
+  global.DEMO_STORE = Object.freeze({ getRegistrations, addRegistration, addRegistrations, getPresentations, savePresentation, getAudit, recordAudit, getEvaluationDrafts, saveEvaluationDraft, removeEvaluationDraft, getEvaluations, saveEvaluation, getReports, saveReport, setFlash, takeFlash });
 })(window);

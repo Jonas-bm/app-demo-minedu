@@ -2,7 +2,8 @@
   const roles = Object.freeze({
     MACRO: "Macro",
     GESTOR: "Gestor de la Información",
-    JEFE: "Jefe"
+    JEFE: "Jefe",
+    ADMINISTRADOR: "Administrador"
   });
 
   const menus = Object.freeze({
@@ -27,12 +28,22 @@
       { id: "informes-macro", label: "Informes por Macro", icon: "inbox" },
       { id: "productividad-gestor", label: "Productividad por Gestor", icon: "chart" },
       { id: "perfil", label: "Perfil", icon: "user" }
+    ]),
+    [roles.ADMINISTRADOR]: Object.freeze([
+      { id: "dashboard-admin", label: "Dashboard", icon: "home" },
+      { id: "usuarios-admin", label: "Usuarios", icon: "users" },
+      { id: "macros-admin", label: "Macros", icon: "users" },
+      { id: "atet-admin", label: "ATET", icon: "file" },
+      { id: "parametros-admin", label: "Parámetros generales", icon: "settings" },
+      { id: "auditoria-admin", label: "Historial de actividades", icon: "history" },
+      { id: "bitacora-admin", label: "Bitácora del sistema", icon: "inbox" },
+      { id: "perfil", label: "Perfil", icon: "user" }
     ])
   });
 
   const roleAliases = Object.freeze({
     macro: roles.MACRO,
-    administrador: roles.MACRO,
+    administrador: roles.ADMINISTRADOR,
     "mesa de partes": roles.MACRO,
     gestor: roles.GESTOR,
     "gestor de la informacion": roles.GESTOR,
@@ -62,7 +73,8 @@
       Object.freeze({ type: "prefix", value: "detalle-evaluacion-gestor/" }),
       Object.freeze({ type: "prefix", value: "vista-previa-informe/" })
     ]),
-    [roles.JEFE]: Object.freeze([])
+    [roles.JEFE]: Object.freeze([]),
+    [roles.ADMINISTRADOR]: Object.freeze([])
   });
 
   function matchesRoute(rule, route) {

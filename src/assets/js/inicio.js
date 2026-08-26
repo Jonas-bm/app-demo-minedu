@@ -14,7 +14,8 @@ if (!storedSession || !sessionRole || !roleMenu) {
     history: '<path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.5M4 4v4.5h4.5M12 7.5V12l3 2"/>',
     user: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c.5-4 2.8-6 7-6s6.5 2 7 6"/>',
     inbox: '<path d="M4 5h16v14H4zM4 14h4l2 2h4l2-2h4"/>',
-    chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'
+    chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.7-.5-1.2.9-1.9-2.1-2.1-1.9.9-1.2-.5-.7-2h-3l-.7 2-1.2.5-1.9-.9-2.1 2.1.9 1.9-.5 1.2-2 .7v3l2 .7.5 1.2-.9 1.9 2.1 2.1 1.9-.9 1.2.5.7 2h3l.7-2 1.2-.5 1.9.9 2.1-2.1-.9-1.9.5-1.2z"/>'
   };
 
   const body = document.body;
@@ -59,6 +60,17 @@ if (!storedSession || !sessionRole || !roleMenu) {
   sessionStorage.setItem("demoSession", JSON.stringify(storedSession));
   document.querySelector("#user-name").textContent = storedSession.nombre;
   document.querySelector("#user-role").textContent = sessionRole;
+  const topbarAvatar = document.querySelector(".user-menu__avatar");
+
+  function applyTopbarPhoto(photo) {
+    topbarAvatar.classList.toggle("has-photo", Boolean(photo));
+    topbarAvatar.style.backgroundImage = photo ? `url("${photo}")` : "";
+  }
+
+  applyTopbarPhoto(localStorage.getItem(`demoProfilePhoto:${storedSession.usuario}`) || "");
+  globalThis.addEventListener("demo-profile-photo-change", (event) => {
+    if (event.detail?.usuario === storedSession.usuario) applyTopbarPhoto(event.detail.photo);
+  });
 
   roleMenu.forEach((item, index) => {
     const link = document.createElement("a");
@@ -247,6 +259,10 @@ if (!storedSession || !sessionRole || !roleMenu) {
             moduleDynamic,
             () => window.location.hash === "#productividad-gestor"
           );
+        }
+
+        if (sessionRole === window.APP_ROLES.ADMINISTRADOR && moduleId.endsWith("-admin")) {
+          window.ADMIN_MODULE.render(moduleDynamic, moduleId);
         }
 
 

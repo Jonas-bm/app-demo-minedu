@@ -44,16 +44,15 @@
     const responses = {};
     const observations = {};
     global.DEMO_EVALUATION_CONFIG.items.forEach((item) => {
-      responses[item.id] = observed && item.id === "item-04" ? "no-cumple" : "cumple";
-      observations[item.id] = observed && item.id === "item-04"
-        ? "Se requiere ampliar el sustento de las actividades reportadas."
-        : "";
+      responses[item.id] = observed && item.id === "producto-04" ? "no-cumple" : "cumple";
+      observations[item.id] = observed && item.id === "producto-04" ? "Los anexos presentados son ilegibles (dato demo)." : "Se verificó el producto en la simulación.";
     });
     return {
       entregableId: deliverable.id,
       resultado: deliverable.evaluacion.estado,
       respuestas: responses,
       observaciones: observations,
+      paginas: Object.fromEntries(global.DEMO_EVALUATION_CONFIG.items.map((item, index) => [item.id, { inicio: 10 + (index * 10), fin: 19 + (index * 10) }])),
       motivo: observed ? "La demostración presenta actividades que requieren mayor sustento y precisión." : "",
       evaluadoPor: deliverable.evaluacion.evaluador || "Macro Demo",
       evaluadoEn: deliverable.evaluacion.fecha,
@@ -140,13 +139,17 @@
       const criterion = document.createElement("p");
       const answer = document.createElement("strong");
       const observation = document.createElement("p");
+      const pages = document.createElement("p");
       const response = evaluation.respuestas?.[item.id];
       row.className = "evaluation-detail__criterion";
       criterion.textContent = `${item.number}. ${item.criterion}`;
       answer.className = `evaluation-answer evaluation-answer--${response || "pendiente"}`;
       answer.textContent = response === "cumple" ? "Cumple" : response === "no-cumple" ? "No cumple" : "Sin respuesta";
       observation.textContent = evaluation.observaciones?.[item.id] || "Sin observación.";
-      row.append(criterion, answer, observation);
+      const pageRange = evaluation.paginas?.[item.id];
+      pages.textContent = pageRange ? `Páginas: ${pageRange.inicio}${pageRange.fin !== pageRange.inicio ? `–${pageRange.fin}` : ""}` : "Páginas no registradas";
+      pages.className = "evaluation-detail__pages";
+      row.append(criterion, answer, observation, pages);
       criteriaGrid.append(row);
     });
     criteriaSection.append(criteriaTitle, criteriaGrid);
@@ -181,10 +184,15 @@
     const options = document.createElement("div");
     const observationLabel = document.createElement("label");
     const observation = document.createElement("textarea");
+    const pageFields = document.createElement("div");
+    const startLabel = document.createElement("label");
+    const start = document.createElement("input");
+    const endLabel = document.createElement("label");
+    const end = document.createElement("input");
     const error = document.createElement("p");
     fieldset.className = "evaluation-item";
     fieldset.dataset.itemId = item.id;
-    legend.textContent = `${item.number}. ${item.criterion}`;
+    legend.textContent = `${item.number}. ${item.product}`;
     options.className = "evaluation-item__options";
     global.DEMO_EVALUATION_CONFIG.responseOptions.forEach((option) => {
       const label = document.createElement("label");
@@ -199,15 +207,31 @@
       options.append(label);
     });
     observationLabel.htmlFor = `${item.id}-observation`;
-    observationLabel.textContent = "Observación del ítem (opcional)";
+    observationLabel.textContent = "Análisis / motivo (obligatorio si no cumple)";
     observation.id = `${item.id}-observation`;
     observation.name = `${item.id}-observation`;
     observation.value = draft?.observaciones?.[item.id] || "";
     observation.rows = 2;
+    pageFields.className = "evaluation-item__pages";
+    startLabel.textContent = "Página inicial";
+    start.type = "number";
+    start.min = "1";
+    start.step = "1";
+    start.name = `${item.id}-page-start`;
+    start.value = draft?.paginas?.[item.id]?.inicio || "";
+    endLabel.textContent = "Página final";
+    end.type = "number";
+    end.min = "1";
+    end.step = "1";
+    end.name = `${item.id}-page-end`;
+    end.value = draft?.paginas?.[item.id]?.fin || "";
+    startLabel.append(start);
+    endLabel.append(end);
+    pageFields.append(startLabel, endLabel);
     error.className = "evaluation-item__error";
     error.id = `${item.id}-error`;
     error.setAttribute("role", "alert");
-    fieldset.append(legend, options, observationLabel, observation, error);
+    fieldset.append(legend, options, observationLabel, observation, pageFields, error);
     return fieldset;
   }
 
@@ -272,11 +296,12 @@
       motiveField.className = "evaluation-motive";
       motiveField.hidden = true;
       motiveLabel.htmlFor = "evaluation-motive";
-      motiveLabel.textContent = "Motivo de observación (obligatorio)";
+      motiveLabel.textContent = "Resumen automático de observaciones";
       motive.id = "evaluation-motive";
       motive.name = "evaluation-motive";
       motive.rows = 3;
       motive.value = draft?.motivo || "";
+      motive.readOnly = true;
       motive.setAttribute("aria-describedby", "evaluation-motive-error");
       motiveError.id = "evaluation-motive-error";
       motiveError.className = "evaluation-item__error";
@@ -302,28 +327,35 @@
       function collectEvaluation(showErrors = true) {
         const responses = {};
         const observations = {};
+        const pages = {};
         let firstMissing = null;
         global.DEMO_EVALUATION_CONFIG.items.forEach((item) => {
           const selected = form.querySelector(`input[name="${item.id}"]:checked`);
           const fieldset = form.querySelector(`[data-item-id="${item.id}"]`);
           const error = fieldset.querySelector(".evaluation-item__error");
-          if (showErrors) {
-            fieldset.classList.toggle("is-invalid", !selected);
-            error.textContent = selected ? "" : "Selecciona una respuesta para este ítem.";
-          }
-          if (!selected && !firstMissing) firstMissing = fieldset.querySelector("input");
+          const observation = form.elements.namedItem(`${item.id}-observation`).value.trim();
+          const start = Number(form.elements.namedItem(`${item.id}-page-start`).value);
+          const end = Number(form.elements.namedItem(`${item.id}-page-end`).value);
+          const message = global.DEMO_EVALUATION_CONFIG.validateEntry(selected?.value, observation, start, end);
+          if (showErrors) { fieldset.classList.toggle("is-invalid", Boolean(message)); error.textContent = message; }
+          if (message && !firstMissing) firstMissing = !selected ? fieldset.querySelector("input") : selected.value === "no-cumple" && !observation ? fieldset.querySelector("textarea") : fieldset.querySelector('input[type="number"]');
           if (selected) responses[item.id] = selected.value;
-          observations[item.id] = form.elements.namedItem(`${item.id}-observation`).value.trim();
+          observations[item.id] = observation;
+          pages[item.id] = { inicio: start || null, fin: end || null };
         });
-        return { responses, observations, firstMissing, calculation: global.DEMO_EVALUATION_CONFIG.calculateResult(responses) };
+        return { responses, observations, pages, firstMissing, calculation: global.DEMO_EVALUATION_CONFIG.calculateResult(responses) };
       }
 
       function updateOutcome() {
-        const { calculation } = collectEvaluation(false);
+        const collected = collectEvaluation(false);
+        const { calculation } = collected;
         const labels = { pendiente: "Pendiente", conforme: "Conforme", observada: "Observado" };
         outcomeValue.textContent = labels[calculation.result];
         outcomeValue.className = `evaluation-outcome__value evaluation-outcome__value--${calculation.result}`;
         motiveField.hidden = calculation.result !== "observada";
+        motive.value = calculation.result === "observada"
+          ? global.DEMO_EVALUATION_CONFIG.items.filter((item) => collected.responses[item.id] === "no-cumple").map((item) => `Producto ${item.number}: ${collected.observations[item.id] || "Motivo pendiente"}`).join(" ")
+          : "";
         if (motiveField.hidden) {
           motiveError.textContent = "";
           motive.setAttribute("aria-invalid", "false");
@@ -338,18 +370,21 @@
           updateOutcome();
         }
       });
+      form.addEventListener("input", (event) => {
+        const item = event.target.closest(".evaluation-item");
+        if (item) {
+          item.classList.remove("is-invalid");
+          item.querySelector(".evaluation-item__error").textContent = "";
+          updateOutcome();
+        }
+      });
       motive.addEventListener("input", () => {
         motiveError.textContent = "";
         motive.setAttribute("aria-invalid", "false");
       });
       saveDraft.addEventListener("click", () => {
         if (submitting) return;
-        const collected = collectEvaluation(true);
-        if (collected.firstMissing) {
-          status.textContent = "Responde los ocho criterios antes de guardar el borrador.";
-          collected.firstMissing.focus();
-          return;
-        }
+        const collected = collectEvaluation(false);
         if (!global.confirm("¿Deseas guardar este borrador de evaluación?")) return;
         const session = JSON.parse(sessionStorage.getItem("demoSession") || "null");
         global.DEMO_STORE.saveEvaluationDraft({
@@ -357,7 +392,11 @@
           estado: "borrador",
           respuestas: collected.responses,
           observaciones: collected.observations,
-          motivo: motive.value.trim(),
+          paginas: collected.pages,
+          catalogoVersion: global.DEMO_EVALUATION_CONFIG.version,
+          motivo: collected.calculation.result === "observada"
+            ? global.DEMO_EVALUATION_CONFIG.items.filter((item) => collected.responses[item.id] === "no-cumple").map((item) => `Producto ${item.number}: ${collected.observations[item.id]}`).join(" ")
+            : "",
           guardadoPor: session?.nombre || "Macro Demo",
           guardadoEn: new Date().toISOString()
         });
@@ -369,11 +408,16 @@
         if (submitting) return;
         const collected = collectEvaluation(true);
         if (collected.firstMissing) {
-          status.textContent = "Responde los ocho criterios antes de finalizar.";
+          status.textContent = "Completa las ocho evaluaciones, sus motivos requeridos y las páginas.";
           collected.firstMissing.focus();
           return;
         }
-        const motiveMissing = collected.calculation.result === "observada" && !motive.value.trim();
+        const generatedMotive = global.DEMO_EVALUATION_CONFIG.items
+          .filter((item) => collected.responses[item.id] === "no-cumple")
+          .map((item) => `Producto ${item.number}: ${collected.observations[item.id]}`)
+          .join(" ");
+        motive.value = generatedMotive;
+        const motiveMissing = collected.calculation.result === "observada" && !generatedMotive;
         motiveError.textContent = motiveMissing ? "El motivo es obligatorio cuando el resultado es Observado." : "";
         motive.setAttribute("aria-invalid", String(motiveMissing));
         if (motiveMissing) {
@@ -392,7 +436,9 @@
           resultado: collected.calculation.result,
           respuestas: collected.responses,
           observaciones: collected.observations,
-          motivo: collected.calculation.result === "observada" ? motive.value.trim() : "",
+          paginas: collected.pages,
+          motivo: collected.calculation.result === "observada" ? generatedMotive : "",
+          catalogoVersion: global.DEMO_EVALUATION_CONFIG.version,
           evaluadoPor: session?.nombre || "Macro Demo",
           evaluadoEn: new Date().toISOString()
         });

@@ -57,7 +57,7 @@
   }
 
   function enhance(select) {
-    if (select.dataset.customSelect === "true" || select.multiple || select.size > 1) return;
+    if (select.dataset.customSelect === "true" || select.dataset.nativeSelect === "true" || select.multiple || select.size > 1) return;
     select.dataset.customSelect = "true";
 
     const wrapper = document.createElement("div");

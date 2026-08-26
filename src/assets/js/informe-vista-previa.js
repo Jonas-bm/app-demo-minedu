@@ -2,26 +2,16 @@
   let dataPromise;
 
   function loadData() {
-    if (!dataPromise) {
-      dataPromise = Promise.all([
-        fetch("../data/dashboard.json").then((response) => {
-          if (!response.ok) throw new Error("No se pudieron cargar los entregables.");
-          return response.json();
-        }),
-        fetch("../data/personal.json").then((response) => {
-          if (!response.ok) throw new Error("No se pudieron cargar los ATET.");
-          return response.json();
-        }),
-        fetch("../data/catalogos.json").then((response) => {
-          if (!response.ok) throw new Error("No se pudieron cargar los catálogos.");
-          return response.json();
-        })
-      ]).catch((error) => {
-        dataPromise = null;
-        throw error;
-      });
-    }
+    if (!dataPromise) dataPromise = Promise.all([
+      fetch("../data/dashboard.json").then((response) => { if (!response.ok) throw new Error("No se pudieron cargar los entregables."); return response.json(); }),
+      fetch("../data/personal.json").then((response) => { if (!response.ok) throw new Error("No se pudieron cargar los ATET."); return response.json(); }),
+      fetch("../data/catalogos.json").then((response) => { if (!response.ok) throw new Error("No se pudieron cargar los catálogos."); return response.json(); })
+    ]).catch((error) => { dataPromise = null; throw error; });
     return dataPromise;
+  }
+
+  function escape(value) {
+    return String(value ?? "—").replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[character]));
   }
 
   function formatPeriod(periodId) {
@@ -33,55 +23,93 @@
   function formatDate(value) {
     if (!value) return "Pendiente de asignar";
     const date = new Date(value.length === 10 ? `${value}T12:00:00` : value);
-    return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-PE", {
-      day: "2-digit", month: "long", year: "numeric"
-    }).format(date);
+    return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-PE", { day: "2-digit", month: "long", year: "numeric" }).format(date);
   }
 
   function getEvaluation(deliverable) {
     const stored = global.DEMO_STORE.getEvaluations().find((item) => item.entregableId === deliverable.id);
     if (stored) return stored;
     const observed = deliverable.evaluacion.estado === "observada";
-    const responses = {};
+    const respuestas = {};
+    const observaciones = {};
+    const paginas = {};
     global.DEMO_EVALUATION_CONFIG.items.forEach((item) => {
-      responses[item.id] = observed && item.id === "item-04" ? "no-cumple" : "cumple";
+      respuestas[item.id] = observed && item.id === "producto-04" ? "no-cumple" : "cumple";
+      observaciones[item.id] = observed && item.id === "producto-04" ? "Los anexos presentados son ilegibles (dato demo)." : "Se presenta el producto solicitado y se verifica su contenido en la simulación.";
+      paginas[item.id] = { inicio: 10 + ((item.number - 1) * 10), fin: 19 + ((item.number - 1) * 10) };
     });
-    return {
-      resultado: deliverable.evaluacion.estado,
-      respuestas: responses,
-      motivo: observed ? "La demostración presenta actividades que requieren mayor sustento y precisión." : "",
-      evaluadoPor: deliverable.evaluacion.evaluador || "Macro Demo",
-      evaluadoEn: deliverable.evaluacion.fecha
-    };
-  }
-
-  function appendData(container, label, value, pending = false) {
-    const item = document.createElement("div");
-    const term = document.createElement("dt");
-    const description = document.createElement("dd");
-    term.textContent = label;
-    description.textContent = value;
-    if (pending) description.className = "report-preview__pending";
-    item.append(term, description);
-    container.append(item);
+    return { resultado: deliverable.evaluacion.estado, respuestas, observaciones, paginas, evaluadoPor: deliverable.evaluacion.evaluador || "Macro Demo", evaluadoEn: deliverable.evaluacion.fecha };
   }
 
   function createReportNumber(deliverable, reports) {
-    const period = deliverable.periodoId.replace("-", "");
-    const sequence = String(reports.length + 1).padStart(3, "0");
-    return `INF-DEMO-${period}-${sequence}`;
+    return `INF-DEMO-${deliverable.periodoId.replace("-", "")}-${String(reports.length + 1).padStart(3, "0")}`;
   }
 
   function downloadReport(report) {
-    const blob = new Blob([report.contenidoHtml], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(new Blob([report.contenidoHtml], { type: "text/html;charset=utf-8" }));
     const link = document.createElement("a");
-    link.href = url;
-    link.download = report.referencia;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    link.href = url; link.download = report.referencia; document.body.append(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+  }
+
+  function pageRange(evaluation, item) {
+    const range = evaluation.paginas?.[item.id];
+    if (!range?.inicio) return "—";
+    return range.inicio === range.fin ? String(range.inicio) : `${range.inicio} - ${range.fin}`;
+  }
+
+  function conformityTables(evaluation, serviceName) {
+    const activities = global.DEMO_EVALUATION_CONFIG.items.map((item) => `<tr><td>${escape(item.activity)}</td><td class="official-report__result">${evaluation.respuestas?.[item.id] === "no-cumple" ? "No cumple" : "Cumple"}</td></tr>`).join("");
+    const products = global.DEMO_EVALUATION_CONFIG.items.map((item) => `<tr><td>${escape(item.product)}</td><td class="official-report__result">${evaluation.respuestas?.[item.id] === "no-cumple" ? "No cumple" : "Cumple"}</td><td>${escape(evaluation.observaciones?.[item.id] || "Se presenta el producto solicitado en esta simulación.")}</td><td class="official-report__pages">${escape(pageRange(evaluation, item))}</td></tr>`).join("");
+    return `<p>De la evaluación realizada a las actividades ejecutadas, se evidencia que en el entregable se cumple con lo solicitado:</p>
+      <div class="official-report__table-wrap"><table class="official-report__table"><thead><tr><th>SEGUNDO ENTREGABLE (Actividades)</th><th>Cumplimiento según TDR<br>(Cumple / No cumple)</th></tr></thead><tbody>${activities}</tbody></table></div>
+      <p>De la evaluación del producto solicitado, se evidencia el siguiente resultado:</p>
+      <p class="official-report__service"><strong>Denominación del servicio:</strong> ${escape(serviceName)}</p>
+      <div class="official-report__table-wrap"><table class="official-report__table official-report__table--products"><thead><tr><th>SEGUNDO ENTREGABLE (Productos)</th><th>Cumplimiento según TDR</th><th>Análisis del producto entregado</th><th>N.° de páginas donde se identifica el producto</th></tr></thead><tbody>${products}</tbody></table></div>`;
+  }
+
+  function observedTable(evaluation, serviceName) {
+    const rows = global.DEMO_EVALUATION_CONFIG.items.map((item) => {
+      const doesNotComply = evaluation.respuestas?.[item.id] === "no-cumple";
+      const detail = doesNotComply ? `No cumple: ${evaluation.observaciones?.[item.id] || "Observación registrada por el Macro."}` : "Cumple";
+      return `<tr><td>${escape(item.product)}</td><td class="${doesNotComply ? "official-report__observation" : "official-report__result"}">${escape(detail)}</td></tr>`;
+    }).join("");
+    const count = global.DEMO_EVALUATION_CONFIG.items.filter((item) => evaluation.respuestas?.[item.id] === "no-cumple").length;
+    return `<p>De la revisión del SEGUNDO ENTREGABLE remitido por el locador, se determina que presenta ${count} observación(es) relacionada(s) con las actividades descritas en los Términos de Referencia.</p>
+      <p class="official-report__service"><strong>Denominación del servicio:</strong> ${escape(serviceName)}</p>
+      <div class="official-report__table-wrap"><table class="official-report__table"><thead><tr><th>SEGUNDO ENTREGABLE (Productos)</th><th>Observaciones</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p>Por lo expuesto, se requiere la subsanación de las observaciones registradas en un plazo referencial de tres (03) días calendario. Este plazo forma parte exclusivamente de la simulación.</p>`;
+  }
+
+  function buildDocument({ deliverable, evaluation, atet, region, existingReport }) {
+    const observed = evaluation.resultado === "observada";
+    const number = existingReport?.numero || "INFORME N.° PENDIENTE-DEMO";
+    const issueDate = existingReport?.fecha ? `Lima, ${formatDate(existingReport.fecha)}` : "Lima, fecha pendiente de asignar (demo)";
+    const serviceName = atet.denominacionServicio || `SERVICIO DE ASISTENCIA TECNOLÓGICA PARA LA ACTUALIZACIÓN DE MATERIALES EDUCATIVOS DIGITALES EN LA REGIÓN ${region.toUpperCase()} — DEMO`;
+    const presentationDate = formatDate(deliverable.presentacion?.fecha);
+    const maximumDate = formatDate(deliverable.fechaMaxima);
+    const subject = observed ? `OBSERVACIONES AL SEGUNDO ENTREGABLE DEL ${serviceName}` : `CONFORMIDAD DEL SEGUNDO ENTREGABLE DEL ${serviceName}`;
+    const count = global.DEMO_EVALUATION_CONFIG.items.filter((item) => evaluation.respuestas?.[item.id] === "no-cumple").length;
+    const analysisTables = observed ? observedTable(evaluation, serviceName) : conformityTables(evaluation, serviceName);
+    const conclusion = observed
+      ? `El segundo entregable presentado en esta demostración tiene ${count} observación(es). Por ello, se determina observar el entregable y solicitar su subsanación simulada.`
+      : "El segundo entregable cumple con las actividades y productos requeridos en esta simulación, por lo que corresponde otorgar la conformidad demo del servicio.";
+    const recommendation = observed ? "Se recomienda remitir el presente informe demo al área correspondiente para la atención simulada de las observaciones." : "Se recomienda remitir el presente informe demo al área correspondiente para continuar con el flujo administrativo simulado.";
+    return `<div class="official-report">
+      <header class="official-report__letterhead"><p>“Decenio de la Igualdad de oportunidades para mujeres y hombres”</p><p>“Año institucional — texto simulado”</p></header>
+      <h3 data-report-number>${escape(number)}</h3>
+      <dl class="official-report__header-data"><div><dt>A</dt><dd>${escape(global.DEMO_REPORT_CONFIG.recipient)}</dd></div><div><dt>De</dt><dd data-report-sender>${escape(global.DEMO_REPORT_CONFIG.sender)}</dd></div><div><dt>Asunto</dt><dd class="report-editable">${escape(subject)}</dd></div><div><dt>Referencia</dt><dd>Orden de Servicio N.° ${escape(deliverable.contrato.ordenServicio)} · SINAD ${escape(atet.sinad || "DEMO")}</dd></div><div><dt>Fecha</dt><dd data-report-date>${escape(issueDate)}</dd></div></dl>
+      <p class="official-report__intro report-editable">Tengo el agrado de dirigirme a usted, en atención al asunto y documento de la referencia, para informar lo siguiente:</p>
+      <section><h4>I. ANTECEDENTES</h4><p>La Dirección de Innovación Tecnológica en Educación desarrolla la estrategia de actualización de materiales educativos digitales en el marco del Plan de Cierre de Brecha Digital.</p><p>Para esta demostración se registra a ${escape(deliverable.atet.nombreCompleto)} como responsable del ${escape(serviceName)}, asociado a la Orden de Servicio N.° ${escape(deliverable.contrato.ordenServicio)}.</p></section>
+      <section><h4>II. ANÁLISIS</h4><p>El SEGUNDO ENTREGABLE fue presentado el ${escape(presentationDate)}, siendo la fecha máxima de presentación el ${escape(maximumDate)}.</p><p>El producto es evaluado de acuerdo con las ocho actividades descritas en los Términos de Referencia y con la revisión registrada por ${escape(evaluation.evaluadoPor || "Macro Demo")}.</p>${analysisTables}</section>
+      <section><h4>III. CONCLUSIONES</h4><p class="report-editable">${escape(conclusion)}</p></section>
+      <section><h4>IV. RECOMENDACIÓN</h4><p class="report-editable">${escape(recommendation)}</p><p>Es todo cuanto debo informar.</p></section>
+      <footer class="official-report__signature"><span aria-hidden="true"></span><strong data-report-signature>${escape(existingReport ? `${existingReport.autor} · firma simulada` : global.DEMO_REPORT_CONFIG.signatureName)}</strong><small>${escape(global.DEMO_REPORT_CONFIG.signatureRole)}</small></footer>
+      <p class="official-report__demo-stamp">DOCUMENTO DE SIMULACIÓN · SIN VALIDEZ OFICIAL</p>
+    </div>`;
+  }
+
+  function downloadableHtml(number, paper) {
+    return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escape(number)}</title><style>body{margin:0;padding:32px;background:#eef1f5;color:#111;font:14px Arial,sans-serif}.official-report{max-width:980px;margin:auto;padding:55px;background:#fff;line-height:1.6}.official-report__letterhead{text-align:center;font-size:12px}.official-report>h3{text-align:center;margin:30px 0}.official-report__header-data>div{display:grid;grid-template-columns:100px 1fr;padding:6px 0}.official-report__header-data dt{font-weight:bold}.official-report__header-data dd{margin:0}.official-report h4{margin-top:28px}.official-report__table-wrap{overflow:auto}.official-report__table{width:100%;border-collapse:collapse;font-size:12px}.official-report__table th,.official-report__table td{padding:8px;border:1px solid #555;vertical-align:top}.official-report__table th{text-align:center;background:#eee}.official-report__result,.official-report__pages{text-align:center}.official-report__signature{width:330px;margin:80px auto 0;text-align:center}.official-report__signature span{display:block;border-top:1px solid #333}.official-report__signature strong,.official-report__signature small{display:block}.official-report__demo-stamp{margin-top:35px;padding:8px;border:2px solid #a33;text-align:center;color:#a33;font-weight:bold}@media(max-width:650px){body{padding:8px}.official-report{padding:20px}.official-report__header-data>div{grid-template-columns:1fr}.official-report__signature{width:100%}}</style></head><body>${paper.innerHTML}</body></html>`;
   }
 
   async function render(container, deliverableId, isCurrent = () => true) {
@@ -89,9 +117,7 @@
     try {
       const [dashboard, personal, catalogs] = await loadData();
       if (!isCurrent()) return;
-      const deliverable = global.DELIVERABLE_CALCULATIONS
-        .buildExpectedDeliverables(dashboard, personal, global.DEMO_STORE.getPresentations(), global.DEMO_STORE.getEvaluations())
-        .find((item) => item.id === deliverableId);
+      const deliverable = global.DELIVERABLE_CALCULATIONS.buildExpectedDeliverables(dashboard, personal, global.DEMO_STORE.getPresentations(), global.DEMO_STORE.getEvaluations()).find((item) => item.id === deliverableId);
       if (!deliverable || !["conforme", "observada"].includes(deliverable.evaluacion.estado)) {
         container.innerHTML = '<div class="atet-state atet-state--error" role="alert"><strong>No se puede preparar el informe.</strong><span>La evaluación debe estar finalizada y publicada.</span><a class="atet-back-link" href="#entregables-pendientes">← Atrás</a></div>';
         return;
@@ -99,128 +125,50 @@
       const evaluation = getEvaluation(deliverable);
       const atet = personal.atets.find((item) => item.codigo === deliverable.atet.codigo) || {};
       const region = catalogs.regiones.find((item) => item.id === atet.regionId)?.nombre || "Dato no disponible";
+      const storedReport = global.DEMO_STORE.getReports().find((item) => item.entregableId === deliverable.id);
+      const existingReport = storedReport?.templateVersion === global.DEMO_REPORT_CONFIG.version ? storedReport : null;
       const wrapper = document.createElement("div");
       const back = document.createElement("a");
       const warning = document.createElement("p");
       const paper = document.createElement("article");
-      const institutional = document.createElement("p");
-      const title = document.createElement("h3");
-      const documentData = document.createElement("dl");
-      const subject = document.createElement("p");
-      const introTitle = document.createElement("h4");
-      const intro = document.createElement("p");
-      const evaluationTitle = document.createElement("h4");
-      const evaluationData = document.createElement("dl");
-      const criteriaTitle = document.createElement("h4");
-      const criteria = document.createElement("ol");
-      const conclusionTitle = document.createElement("h4");
-      const conclusion = document.createElement("p");
-      const signature = document.createElement("div");
       const actions = document.createElement("div");
+      const edit = document.createElement("button");
       const generate = document.createElement("button");
-      const generationStatus = document.createElement("p");
+      const status = document.createElement("p");
       wrapper.className = "report-preview";
-      back.className = "atet-back-link";
-      back.href = `#detalle-evaluacion-gestor/${encodeURIComponent(deliverable.id)}`;
-      back.textContent = "← Atrás";
-      back.setAttribute("aria-label", "Atrás, volver al detalle de evaluación");
-      warning.className = "registration-form__note report-preview__warning";
-      warning.textContent = global.DEMO_REPORT_CONFIG.warning;
-      paper.className = "report-preview__paper";
-      institutional.className = "report-preview__institution";
-      institutional.textContent = "MINISTERIO DE EDUCACIÓN · DIRECCIÓN DE INNOVACIÓN TECNOLÓGICA EN EDUCACIÓN";
-      title.textContent = global.DEMO_REPORT_CONFIG.titles[evaluation.resultado];
-      documentData.className = "report-preview__document-data";
-      appendData(documentData, "Número de informe", "Pendiente de asignar", true);
-      appendData(documentData, "Fecha de emisión", "Pendiente de asignar", true);
-      appendData(documentData, "Versión de plantilla", global.DEMO_REPORT_CONFIG.version);
-      subject.className = "report-preview__subject";
-      subject.textContent = `Asunto: Resultado del entregable N.° ${deliverable.numero} correspondiente a ${formatPeriod(deliverable.periodoId)}.`;
-      introTitle.textContent = "1. Antecedentes";
-      intro.textContent = global.DEMO_REPORT_CONFIG.introduction;
-      evaluationTitle.textContent = "2. Datos de la evaluación";
-      evaluationData.className = "report-preview__evaluation-data";
-      appendData(evaluationData, "ATET", `${deliverable.atet.nombreCompleto} · ${deliverable.atet.codigo}`);
-      appendData(evaluationData, "Orden de servicio", deliverable.contrato.ordenServicio);
-      appendData(evaluationData, "Región", region);
-      appendData(evaluationData, "Periodo", formatPeriod(deliverable.periodoId));
-      appendData(evaluationData, "Macro evaluador", evaluation.evaluadoPor || "Macro Demo");
-      appendData(evaluationData, "Fecha de evaluación", formatDate(evaluation.evaluadoEn));
-      criteriaTitle.textContent = "3. Resumen de criterios";
-      criteria.className = "report-preview__criteria";
-      global.DEMO_EVALUATION_CONFIG.items.forEach((item) => {
-        const row = document.createElement("li");
-        const text = document.createElement("span");
-        const answer = document.createElement("strong");
-        text.textContent = item.criterion;
-        answer.textContent = evaluation.respuestas?.[item.id] === "no-cumple" ? "No cumple" : "Cumple";
-        answer.className = evaluation.respuestas?.[item.id] === "no-cumple" ? "is-observed" : "is-conforming";
-        row.append(text, answer);
-        criteria.append(row);
-      });
-      conclusionTitle.textContent = "4. Conclusión";
-      conclusion.textContent = global.DEMO_REPORT_CONFIG.conclusion[evaluation.resultado];
-      if (evaluation.resultado === "observada") conclusion.textContent += ` Motivo: ${evaluation.motivo}`;
-      signature.className = "report-preview__signature";
-      signature.innerHTML = '<span aria-hidden="true"></span><strong>Responsable de emisión y firma</strong><small>Pendiente de asignar</small>';
+      back.className = "atet-back-link"; back.href = `#detalle-evaluacion-gestor/${encodeURIComponent(deliverable.id)}`; back.textContent = "← Atrás";
+      warning.className = "registration-form__note report-preview__warning"; warning.textContent = global.DEMO_REPORT_CONFIG.warning;
+      paper.className = "report-preview__paper"; paper.innerHTML = buildDocument({ deliverable, evaluation, atet, region, existingReport });
       actions.className = "report-preview__actions";
-      generate.className = "registration-action registration-action--primary";
-      generate.type = "button";
-      generationStatus.className = "registration-form__status";
-      generationStatus.setAttribute("role", "status");
-      generationStatus.setAttribute("aria-live", "polite");
-      const existingReport = global.DEMO_STORE.getReports().find((item) => item.entregableId === deliverable.id);
-      function applyGeneratedData(report) {
-        const numberValue = documentData.children[0].querySelector("dd");
-        const dateValue = documentData.children[1].querySelector("dd");
-        numberValue.textContent = report.numero;
-        dateValue.textContent = formatDate(report.fecha);
-        numberValue.classList.remove("report-preview__pending");
-        dateValue.classList.remove("report-preview__pending");
-        signature.querySelector("strong").textContent = report.autor;
-        signature.querySelector("small").textContent = "Gestor responsable · Demo";
-        signature.querySelector("small").classList.remove("report-preview__pending");
-      }
-      if (existingReport) applyGeneratedData(existingReport);
-      generate.textContent = existingReport ? "Descargar informe generado" : "Generar informe demo";
-      paper.append(institutional, title, documentData, subject, introTitle, intro, evaluationTitle, evaluationData, criteriaTitle, criteria, conclusionTitle, conclusion, signature);
-      actions.append(generate, generationStatus);
-      wrapper.append(back, warning, paper, actions);
-      container.replaceChildren(wrapper);
+      edit.className = "registration-action registration-action--secondary"; edit.type = "button"; edit.textContent = "Editar información del informe";
+      generate.className = "registration-action registration-action--primary"; generate.type = "button"; generate.textContent = existingReport ? "Descargar informe generado" : "Generar informe demo";
+      status.className = "registration-form__status"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
+      actions.append(edit, generate, status); wrapper.append(back, warning, paper, actions); container.replaceChildren(wrapper);
+
+      edit.addEventListener("click", () => {
+        const editing = edit.getAttribute("aria-pressed") !== "true";
+        paper.querySelectorAll(".report-editable").forEach((element) => { element.contentEditable = String(editing); element.classList.toggle("is-editable", editing); });
+        edit.setAttribute("aria-pressed", String(editing)); edit.textContent = editing ? "Guardar edición demo" : "Editar información del informe";
+        status.textContent = editing ? "Puedes ajustar los textos del informe; la evaluación y las tablas permanecen bloqueadas." : "Edición aplicada a la vista previa.";
+        if (editing) paper.querySelector(".report-editable")?.focus();
+      });
 
       generate.addEventListener("click", () => {
-        const currentReport = global.DEMO_STORE.getReports().find((item) => item.entregableId === deliverable.id);
-        if (currentReport) {
-          downloadReport(currentReport);
-          generationStatus.textContent = `Se descargó ${currentReport.referencia}.`;
-          return;
-        }
+        const current = global.DEMO_STORE.getReports().find((item) => item.entregableId === deliverable.id && item.templateVersion === global.DEMO_REPORT_CONFIG.version);
+        if (current) { downloadReport(current); status.textContent = `Se descargó ${current.referencia}.`; return; }
         if (!global.confirm("¿Deseas generar este informe ficticio de demostración?")) return;
         generate.disabled = true;
+        paper.querySelectorAll(".report-editable").forEach((element) => { element.contentEditable = "false"; element.classList.remove("is-editable"); });
         const reports = global.DEMO_STORE.getReports();
         const session = JSON.parse(sessionStorage.getItem("demoSession") || "null");
         const generatedAt = new Date().toISOString();
         const number = createReportNumber(deliverable, reports);
-        const reference = `${number.toLowerCase()}.html`;
-        const report = {
-          id: `report-${deliverable.id}`,
-          entregableId: deliverable.id,
-          numero: number,
-          tipo: evaluation.resultado,
-          fecha: generatedAt.slice(0, 10),
-          autor: session?.nombre || "Gestor Demo",
-          estado: "generado",
-          referencia: reference,
-          generadoEn: generatedAt,
-          contenidoHtml: ""
-        };
-        applyGeneratedData(report);
-        report.contenidoHtml = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${number}</title><style>body{margin:0;padding:32px;background:#eef1f5;color:#17191d;font-family:Arial,sans-serif}.report-preview__paper{max-width:900px;margin:auto;padding:48px;background:#fff}.report-preview__institution,.report-preview__paper>h3{text-align:center}.report-preview__document-data,.report-preview__evaluation-data{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#dfe3e8}.report-preview__document-data>div,.report-preview__evaluation-data>div{padding:12px;background:#fff}dt{font-size:12px;font-weight:700;color:#566173}dd{margin:5px 0 0;font-weight:700}.report-preview__criteria{padding-left:24px}.report-preview__criteria li{padding:8px;border-bottom:1px solid #dfe3e8}.report-preview__criteria strong{float:right}.report-preview__signature{margin:64px auto 0;text-align:center}.report-preview__signature span{display:block;border-top:1px solid #596273}@media(max-width:650px){body{padding:12px}.report-preview__paper{padding:20px}.report-preview__document-data,.report-preview__evaluation-data{grid-template-columns:1fr}}</style></head><body>${paper.outerHTML}</body></html>`;
+        paper.querySelector("[data-report-number]").textContent = number;
+        paper.querySelector("[data-report-date]").textContent = `Lima, ${formatDate(generatedAt)}`;
+        paper.querySelector("[data-report-signature]").textContent = `${session?.nombre || "Gestor Demo"} · firma simulada`;
+        const report = { id: `report-${deliverable.id}`, entregableId: deliverable.id, numero: number, tipo: evaluation.resultado, templateVersion: global.DEMO_REPORT_CONFIG.version, fecha: generatedAt.slice(0, 10), autor: session?.nombre || "Gestor Demo", estado: "generado", referencia: `${number.toLowerCase()}.html`, generadoEn: generatedAt, contenidoHtml: downloadableHtml(number, paper) };
         global.DEMO_STORE.saveReport(report);
-        generate.disabled = false;
-        generate.textContent = "Descargar informe generado";
-        generationStatus.textContent = `Informe ${number} generado correctamente.`;
-        downloadReport(report);
+        generate.disabled = false; generate.textContent = "Descargar informe generado"; status.textContent = `Informe ${number} generado correctamente.`; downloadReport(report);
       });
     } catch (error) {
       if (!isCurrent()) return;
