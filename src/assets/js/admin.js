@@ -37,9 +37,11 @@
     container.querySelectorAll("[data-admin-paged-table]:not([data-pagination-ready])").forEach((wrapper, tableIndex) => {
       wrapper.dataset.paginationReady = "true";
       const rows = [...wrapper.querySelectorAll("tbody > tr")];
+      const tableElement = wrapper.querySelector("table");
       const pageSize = 5;
       const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
       let currentPage = 1;
+      let changingPage = false;
       const pager = document.createElement("nav");
       const previous = document.createElement("button");
       const status = document.createElement("span");
@@ -50,18 +52,38 @@
       previous.textContent = "Anterior";
       next.textContent = "Siguiente";
       status.setAttribute("aria-live", "polite");
-      function showPage(page) {
+      function renderPage(page) {
         currentPage = Math.min(totalPages, Math.max(1, page));
         rows.forEach((row, index) => { row.hidden = index < (currentPage - 1) * pageSize || index >= currentPage * pageSize; });
         previous.disabled = currentPage === 1;
         next.disabled = currentPage === totalPages;
         status.textContent = `Página ${currentPage} de ${totalPages}`;
       }
+      function showPage(page, animate = true) {
+        const targetPage = Math.min(totalPages, Math.max(1, page));
+        if (targetPage === currentPage || changingPage) return;
+        const reducedMotion = global.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        if (!animate || reducedMotion) { renderPage(targetPage); return; }
+        changingPage = true;
+        previous.disabled = true;
+        next.disabled = true;
+        wrapper.classList.add("is-page-leaving");
+        global.setTimeout(() => {
+          wrapper.classList.remove("is-page-leaving");
+          wrapper.classList.add("is-page-entering");
+          renderPage(targetPage);
+          tableElement.getBoundingClientRect();
+          global.requestAnimationFrame(() => {
+            wrapper.classList.remove("is-page-entering");
+            global.setTimeout(() => { changingPage = false; previous.disabled = currentPage === 1; next.disabled = currentPage === totalPages; }, 180);
+          });
+        }, 130);
+      }
       previous.addEventListener("click", () => showPage(currentPage - 1));
       next.addEventListener("click", () => showPage(currentPage + 1));
       pager.append(previous, status, next);
       wrapper.after(pager);
-      showPage(1);
+      renderPage(1);
     });
   }
 
@@ -78,9 +100,36 @@
       <section class="admin-panel"><h3>Última actividad</h3>${renderAuditTable(global.DEMO_STORE.getAudit().slice(-5).reverse())}</section>`;
   }
 
+  function auditRoute(item) {
+    const entity = String(item.entidad || "").toLocaleLowerCase("es");
+    if (entity === "usuarios") return "usuarios-admin";
+    if (entity === "atet") return "atet-admin";
+    if (entity === "parametros") return "parametros-admin";
+    if (entity === "importaciones") return "atet-admin";
+    if (entity.includes("macro")) return "macros-admin";
+    return "";
+  }
+
+  function actionKind(action) {
+    const value = String(action || "").toLocaleLowerCase("es");
+    if (["crear", "creacion", "inicio"].includes(value)) return "create";
+    if (value.includes("correg") || value.includes("actual") || value.includes("estado")) return "update";
+    if (value.includes("desactiv") || value.includes("elimin")) return "delete";
+    if (value.includes("consulta") || value.includes("visual")) return "view";
+    return "other";
+  }
+
+  function initials(name) {
+    return String(name || "U").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+  }
+
   function renderAuditTable(entries) {
     if (!entries.length) return '<p class="atet-state">Aún no hay eventos locales. Las operaciones nuevas aparecerán aquí.</p>';
-    return table(["Fecha y hora", "Usuario", "Rol", "Módulo", "Acción", "Descripción"], entries.map((item) => `<tr><td>${escape(date(item.fecha))}</td><td>${escape(item.usuario)}</td><td>${escape(item.rol || "Demo")}</td><td>${escape(item.entidad)}</td><td><span class="admin-badge">${escape(item.accion)}</span></td><td>${escape(item.detalle)}</td></tr>`));
+    return `<div class="admin-table-wrap audit-table-wrap" data-admin-paged-table><table class="admin-table audit-table"><thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Rol</th><th>Módulo</th><th>Acción</th><th>Descripción</th><th>Registro afectado</th><th>Detalle</th></tr></thead><tbody>${entries.map((item, index) => {
+      const route = auditRoute(item);
+      const record = escape(item.entidadId || "—");
+      return `<tr><td>${escape(date(item.fecha))}</td><td><span class="audit-user"><span class="audit-user__avatar">${escape(initials(item.usuario))}</span>${escape(item.usuario)}</span></td><td>${escape(item.rol || "Demo")}</td><td>${escape(item.entidad)}</td><td><span class="audit-action audit-action--${actionKind(item.accion)}">${escape(item.accion)}</span></td><td class="audit-description">${escape(item.detalle)}</td><td>${route ? `<a class="audit-record-link" href="#${route}" title="Abrir módulo relacionado">${record}</a>` : `<span class="audit-record-code">${record}</span>`}</td><td><button class="audit-detail-button" type="button" data-audit-detail="${index}" aria-label="Ver detalle de ${record}">Ver</button></td></tr>`;
+    }).join("")}</tbody></table></div>`;
   }
 
   function normalizeUsername(value) {
@@ -100,9 +149,9 @@
           <div class="registration-field"><label for="admin-user-dni">DNI demo *</label><input id="admin-user-dni" name="dni" inputmode="numeric" maxlength="8" autocomplete="off" required><p class="registration-field__error" data-error="dni" role="alert"></p></div>
           <div class="registration-field"><label for="admin-user-email">Correo electrónico *</label><input id="admin-user-email" name="email" type="email" autocomplete="off" required><p class="registration-field__error" data-error="email" role="alert"></p></div>
           <div class="registration-field"><label for="admin-user-username">Usuario *</label><input id="admin-user-username" name="username" autocomplete="off" required><p class="registration-field__help">Puedes modificar el usuario sugerido.</p><p class="registration-field__error" data-error="username" role="alert"></p></div>
-          <div class="registration-field"><label for="admin-user-role">Rol *</label><select id="admin-user-role" name="role" data-native-select="true" required><option value="">Seleccionar rol</option><option>Macro</option><option value="Gestor de la Información">Gestor de la Información</option><option>Jefe</option></select><p class="registration-field__help">El sistema dispone de un único Administrador protegido.</p><p class="registration-field__error" data-error="role" role="alert"></p></div>
+          <div class="registration-field"><label for="admin-user-role">Rol *</label><select id="admin-user-role" name="role" required><option value="">Seleccionar rol</option><option>Macro</option><option value="Gestor de la Información">Gestor de la Información</option><option>Jefe</option></select><p class="registration-field__help">El sistema dispone de un único Administrador protegido.</p><p class="registration-field__error" data-error="role" role="alert"></p></div>
           <div class="registration-field"><label for="admin-user-password">Contraseña temporal *</label><input id="admin-user-password" name="password" type="text" value="demo2026" autocomplete="off" required><p class="registration-field__help">Solo para la simulación; mínimo 6 caracteres.</p><p class="registration-field__error" data-error="password" role="alert"></p></div>
-          <div class="registration-field"><label for="admin-user-status">Estado inicial *</label><select id="admin-user-status" name="status" data-native-select="true" required><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select><p class="registration-field__error" data-error="status" role="alert"></p></div>
+          <div class="registration-field"><label for="admin-user-status">Estado inicial *</label><select id="admin-user-status" name="status" required><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select><p class="registration-field__error" data-error="status" role="alert"></p></div>
         </div>
       </div>
       <footer class="admin-user-modal__footer"><p class="admin-user-form__status" role="status" aria-live="polite"></p><button class="registration-action registration-action--secondary" data-modal-cancel type="button">Cancelar</button><button class="registration-action registration-action--primary" type="submit">Crear usuario</button></footer>
@@ -266,15 +315,62 @@
     activateAdminPagination(container);
   }
 
+  function permissionCell(value) {
+    const labels = { yes: "Permitido", partial: "Permitido parcialmente", no: "No permitido" };
+    const symbols = { yes: "✓", partial: "◐", no: "×" };
+    return `<td><span class="role-permission role-permission--${value}" title="${labels[value]}" aria-label="${labels[value]}">${symbols[value]}</span></td>`;
+  }
+
+  function renderRolesPermissions(container) {
+    const permissions = [
+      ["Gestión del sistema", "Administrar usuarios", "yes", "no", "no", "no"],
+      ["Gestión del sistema", "Administrar grupos Macro", "yes", "no", "no", "no"],
+      ["Gestión del sistema", "Configurar parámetros y catálogos", "yes", "no", "no", "no"],
+      ["Gestión del sistema", "Consultar auditoría y bitácora", "yes", "no", "no", "no"],
+      ["ATET", "Registrar e importar ATET", "no", "yes", "no", "no"],
+      ["ATET", "Consultar ATET de su grupo", "partial", "yes", "partial", "partial"],
+      ["ATET", "Corregir o desactivar ATET", "yes", "no", "no", "no"],
+      ["Entregables", "Registrar presentación", "no", "yes", "no", "no"],
+      ["Entregables", "Revisar PDF externo", "no", "yes", "no", "no"],
+      ["Entregables", "Evaluar los 8 productos", "no", "yes", "no", "no"],
+      ["Informes", "Verificar evaluación registrada", "no", "no", "yes", "partial"],
+      ["Informes", "Generar informe conforme u observado", "no", "no", "yes", "no"],
+      ["Informes", "Consultar historial de informes", "no", "no", "yes", "yes"],
+      ["Estadísticas", "Consultar indicadores operativos", "partial", "partial", "partial", "yes"],
+      ["Estadísticas", "Consultar avance por Macro", "partial", "no", "no", "yes"],
+      ["Estadísticas", "Consultar productividad del Gestor", "no", "no", "no", "yes"]
+    ];
+    const matrixRows = permissions.map(([group, action, admin, macro, manager, boss]) => `<tr><td><span class="role-permission-group">${escape(group)}</span></td><td>${escape(action)}</td>${permissionCell(admin)}${permissionCell(macro)}${permissionCell(manager)}${permissionCell(boss)}</tr>`);
+    container.innerHTML = `${notice()}<div class="roles-layout">
+      <section class="roles-flow admin-panel"><div class="roles-section-heading"><h3>Roles y flujo de trabajo</h3><p>Responsabilidades dentro del proceso del Sistema ATET.</p></div><div class="roles-flow__columns">
+        <article class="role-flow-card role-flow-card--macro"><header><span>M</span><div><h4>Macro</h4><p>Registro y evaluación</p></div></header><ol><li><strong>Registra ATET</strong><span>Registra manualmente o importa los ATET de su grupo.</span></li><li><strong>Registra presentación</strong><span>Consigna la fecha del entregable presentado externamente.</span></li><li><strong>Revisa el PDF externo</strong><span>Realiza la revisión física fuera del Sistema ATET.</span></li><li><strong>Evalúa los 8 productos</strong><span>Marca Cumple/No cumple, análisis y páginas.</span></li></ol></article>
+        <article class="role-flow-card role-flow-card--manager"><header><span>G</span><div><h4>Gestor</h4><p>Control e informes</p></div></header><ol><li><strong>Verifica la información</strong><span>Consulta la evaluación registrada por el Macro.</span></li><li><strong>Genera el informe</strong><span>Usa la evaluación sin volver a revisar el PDF.</span></li><li><strong>Conforme u observado</strong><span>Emite el informe demo correspondiente.</span></li></ol></article>
+        <article class="role-flow-card role-flow-card--boss"><header><span>J</span><div><h4>Jefe</h4><p>Estadísticas y consultas</p></div></header><ol><li><strong>Indicadores ejecutivos</strong><span>Consulta avance, resultados e informes.</span></li><li><strong>Supervisión</strong><span>Acceso de solo lectura a información consolidada.</span></li></ol></article>
+      </div><p class="registration-form__note roles-admin-note"><strong>Administrador:</strong> mantiene usuarios, ATET, parámetros y auditoría; no participa en la revisión ni generación de informes.</p></section>
+      <section class="roles-matrix admin-panel"><div class="roles-section-heading"><h3>Matriz de permisos por rol</h3><p>Permisos efectivos según los módulos implementados.</p></div><div class="admin-table-wrap" data-admin-paged-table><table class="admin-table roles-permission-table"><thead><tr><th>Área</th><th>Módulo / funcionalidad</th><th>Administrador</th><th>Macro</th><th>Gestor</th><th>Jefe</th></tr></thead><tbody>${matrixRows.join("")}</tbody></table></div><div class="roles-legend"><span>${permissionCell("yes").replace(/^<td>|<\/td>$/g, "")} Permitido</span><span>${permissionCell("partial").replace(/^<td>|<\/td>$/g, "")} Parcial</span><span>${permissionCell("no").replace(/^<td>|<\/td>$/g, "")} No permitido</span></div></section>
+    </div>`;
+    activateAdminPagination(container);
+  }
+
   async function renderParameters(container) {
     const [, , catalogs] = await loadData();
     const regions = catalogs.regiones || [];
     const zones = catalogs.zonas || [];
-    container.innerHTML = `${notice()}<div class="admin-toolbar"><button class="registration-action registration-action--secondary" data-parameter-save type="button">Guardar cambios simulados</button><span>Catálogo protegido y versionado</span></div><div class="admin-grid"><section class="admin-panel"><h3>Regiones y ámbitos</h3>${table(["Región", "Ámbito"], regions.map((item) => `<tr><td>${escape(item.nombre)}</td><td>${escape(item.ambito || item.ambitoId)}</td></tr>`))}</section><section class="admin-panel"><h3>Zonas configuradas</h3><p><strong>${zones.length}</strong> zonas disponibles en el catálogo demo.</p><p>Los cambios estructurales se simulan para proteger la consistencia de registros existentes.</p></section></div><section class="admin-panel"><h3>Ítems del segundo entregable</h3><ol class="admin-products">${global.DEMO_EVALUATION_CONFIG.items.map((item) => `<li><strong>Producto ${item.number}</strong><span>${escape(item.product)}</span></li>`).join("")}</ol><p class="admin-help">Versión: ${escape(global.DEMO_EVALUATION_CONFIG.version)}</p></section>`;
+    const orderedProducts = [...global.DEMO_EVALUATION_CONFIG.items].sort((first, second) => first.number - second.number);
+    container.innerHTML = `${notice()}<div class="admin-toolbar"><button class="registration-action registration-action--secondary" data-parameter-save type="button">Guardar cambios</button><span>Catálogo protegido y versionado</span></div><section class="admin-panel admin-year-parameter"><div><h3>Año de los materiales educativos digitales</h3><p>Este valor se aplica a las actividades, productos, evaluaciones y vistas de informes que mencionan el año.</p></div><label>Año del catálogo<input data-catalog-year type="number" inputmode="numeric" min="2000" max="2100" step="1" value="${global.DEMO_EVALUATION_CONFIG.year}" required></label></section><div class="admin-grid"><section class="admin-panel"><h3>Regiones y ámbitos</h3>${table(["Región", "Ámbito"], regions.map((item) => `<tr><td>${escape(item.nombre)}</td><td>${escape(item.ambito || item.ambitoId)}</td></tr>`))}</section><section class="admin-panel"><h3>Zonas configuradas</h3><p><strong>${zones.length}</strong> zonas disponibles en el catálogo demo.</p><p>Los cambios estructurales se simulan para proteger la consistencia de registros existentes.</p></section></div><section class="admin-panel"><h3>Ítems del segundo entregable</h3><ol class="admin-products">${orderedProducts.map((item) => `<li value="${item.number}"><strong>Producto ${item.number}</strong><span>${escape(item.product)}</span></li>`).join("")}</ol><p class="admin-help">Año vigente: ${global.DEMO_EVALUATION_CONFIG.year} · Versión: ${escape(global.DEMO_EVALUATION_CONFIG.version)} · Orden fijo del producto 1 al 8.</p></section>`;
     container.querySelector("[data-parameter-save]").addEventListener("click", () => {
-      if (!global.confirm("¿Registrar una actualización simulada de parámetros? Los catálogos base no se sobrescribirán.")) return;
-      global.DEMO_STORE.recordAudit({ entidad: "parametros", entidadId: global.DEMO_EVALUATION_CONFIG.version, accion: "actualizar", detalle: "Guardó una revisión simulada de parámetros sin alterar el catálogo base.", nivel: "advertencia" });
-      global.alert("Cambios simulados guardados en la auditoría. El catálogo base permanece protegido.");
+      const input = container.querySelector("[data-catalog-year]");
+      if (!input.reportValidity()) return;
+      const previousYear = global.DEMO_EVALUATION_CONFIG.year;
+      try {
+        const newYear = global.DEMO_EVALUATION_CONFIG.setYear(input.value);
+        global.DEMO_STORE.recordAudit({ entidad: "parametros", entidadId: "anio-catalogo-entregable", accion: "actualizar", detalle: `Actualizó el año de los materiales educativos digitales de ${previousYear} a ${newYear}.`, nivel: "exito", anterior: { year: previousYear }, nuevo: { year: newYear } });
+        renderParameters(container);
+      } catch (error) {
+        input.setCustomValidity(error.message);
+        input.reportValidity();
+        input.setCustomValidity("");
+      }
     });
   }
 
@@ -287,14 +383,52 @@
       ];
       entries = [...entries, ...simulated].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
     }
-    container.innerHTML = `${notice()}<div class="admin-toolbar"><input class="admin-search" type="search" placeholder="Buscar por usuario, módulo o descripción" aria-label="Buscar eventos"><button class="registration-action registration-action--secondary" data-export-events type="button">Exportar CSV demo</button><span>${entries.length} eventos</span></div><div data-admin-events>${renderAuditTable(entries)}</div>`;
-    const search = container.querySelector(".admin-search");
-    search.addEventListener("input", () => { const term = search.value.toLocaleLowerCase("es"); const filtered = entries.filter((item) => [item.usuario, item.rol, item.entidad, item.accion, item.detalle, item.nivel].join(" ").toLocaleLowerCase("es").includes(term)); container.querySelector("[data-admin-events]").innerHTML = renderAuditTable(filtered); activateAdminPagination(container.querySelector("[data-admin-events]")); });
+    const unique = (field) => [...new Set(entries.map((item) => item[field] || "Demo"))].sort((a, b) => String(a).localeCompare(String(b), "es"));
+    const options = (values) => values.map((value) => `<option value="${escape(value)}">${escape(value)}</option>`).join("");
+    container.innerHTML = `${notice()}<section class="audit-filters" aria-label="Filtros del historial"><div class="audit-filter-grid"><label>Fecha inicio<input data-audit-start type="date"></label><label>Fecha fin<input data-audit-end type="date"></label><label>Usuario<select data-audit-user><option value="">Todos</option>${options(unique("usuario"))}</select></label><label>Rol<select data-audit-role><option value="">Todos</option>${options(unique("rol"))}</select></label><label>Módulo<select data-audit-module><option value="">Todos</option>${options(unique("entidad"))}</select></label><label>Acción<select data-audit-action><option value="">Todas</option>${options(unique("accion"))}</select></label><label class="audit-filter-search">Buscar por descripción o registro<input data-audit-search type="search" placeholder="Ej. ATET-001, informe, usuario…"></label></div><div class="audit-filter-actions"><div><button class="registration-action registration-action--secondary" data-audit-clear type="button">Limpiar filtros</button><button class="registration-action registration-action--primary" data-audit-submit type="button">Buscar</button></div><button class="registration-action registration-action--secondary" data-export-events type="button">Exportar CSV</button></div></section><div class="audit-results-heading"><span data-audit-count>${entries.length} registros encontrados</span><small>Los códigos azules abren el módulo relacionado.</small></div><div data-admin-events></div>`;
+    let filteredEntries = entries;
+    const results = container.querySelector("[data-admin-events]");
+    function applyFilters() {
+      const start = container.querySelector("[data-audit-start]").value;
+      const end = container.querySelector("[data-audit-end]").value;
+      const user = container.querySelector("[data-audit-user]").value;
+      const role = container.querySelector("[data-audit-role]").value;
+      const module = container.querySelector("[data-audit-module]").value;
+      const action = container.querySelector("[data-audit-action]").value;
+      const term = container.querySelector("[data-audit-search]").value.trim().toLocaleLowerCase("es");
+      filteredEntries = entries.filter((item) => {
+        const day = String(item.fecha || "").slice(0, 10);
+        const searchable = [item.usuario, item.rol, item.entidad, item.accion, item.detalle, item.entidadId].join(" ").toLocaleLowerCase("es");
+        return (!start || day >= start) && (!end || day <= end) && (!user || item.usuario === user) && (!role || (item.rol || "Demo") === role) && (!module || item.entidad === module) && (!action || item.accion === action) && (!term || searchable.includes(term));
+      });
+      results.innerHTML = renderAuditTable(filteredEntries);
+      container.querySelector("[data-audit-count]").textContent = `${filteredEntries.length} ${filteredEntries.length === 1 ? "registro encontrado" : "registros encontrados"}`;
+      activateAdminPagination(results);
+    }
+    container.querySelector("[data-audit-submit]").addEventListener("click", applyFilters);
+    container.querySelector("[data-audit-search]").addEventListener("keydown", (event) => { if (event.key === "Enter") applyFilters(); });
+    container.querySelector("[data-audit-clear]").addEventListener("click", () => { container.querySelectorAll(".audit-filters input, .audit-filters select").forEach((control) => { control.value = ""; }); applyFilters(); });
+    results.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-audit-detail]");
+      if (!button) return;
+      const item = filteredEntries[Number(button.dataset.auditDetail)];
+      if (!item) return;
+      const dialog = document.createElement("dialog");
+      dialog.className = "admin-user-modal audit-detail-modal";
+      dialog.innerHTML = `<article><header class="admin-user-modal__header"><div><h3>Detalle de la actividad</h3><p>${escape(item.entidadId || "Registro demo")}</p></div><button class="admin-user-modal__close" type="button" aria-label="Cerrar">×</button></header><div class="admin-user-modal__body"><dl class="audit-detail-list"><div><dt>Fecha y hora</dt><dd>${escape(date(item.fecha))}</dd></div><div><dt>Usuario y rol</dt><dd>${escape(item.usuario)} · ${escape(item.rol || "Demo")}</dd></div><div><dt>Módulo</dt><dd>${escape(item.entidad)}</dd></div><div><dt>Acción</dt><dd>${escape(item.accion)}</dd></div><div><dt>Descripción</dt><dd>${escape(item.detalle)}</dd></div>${item.anterior !== null && item.anterior !== undefined ? `<div><dt>Valor anterior</dt><dd><pre>${escape(typeof item.anterior === "object" ? JSON.stringify(item.anterior, null, 2) : item.anterior)}</pre></dd></div>` : ""}${item.nuevo !== null && item.nuevo !== undefined ? `<div><dt>Valor nuevo</dt><dd><pre>${escape(typeof item.nuevo === "object" ? JSON.stringify(item.nuevo, null, 2) : item.nuevo)}</pre></dd></div>` : ""}</dl></div></article>`;
+      document.body.append(dialog);
+      const close = () => { dialog.close(); dialog.remove(); };
+      dialog.querySelector("button").addEventListener("click", close);
+      dialog.addEventListener("cancel", (event) => { event.preventDefault(); close(); });
+      dialog.addEventListener("click", (event) => { if (event.target === dialog) close(); });
+      dialog.showModal();
+    });
     container.querySelector("[data-export-events]").addEventListener("click", () => {
-      const csv = ["fecha,usuario,rol,modulo,accion,descripcion", ...entries.map((item) => [item.fecha, item.usuario, item.rol, item.entidad, item.accion, item.detalle].map((value) => `"${String(value || "").replaceAll('"', '""')}"`).join(","))].join("\n");
+      const csv = ["fecha,usuario,rol,modulo,accion,descripcion,registro_afectado", ...filteredEntries.map((item) => [item.fecha, item.usuario, item.rol, item.entidad, item.accion, item.detalle, item.entidadId].map((value) => `"${String(value || "").replaceAll('"', '""')}"`).join(","))].join("\n");
       const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
       const link = document.createElement("a"); link.href = url; link.download = logMode ? "bitacora-demo.csv" : "auditoria-demo.csv"; document.body.append(link); link.click(); link.remove(); URL.revokeObjectURL(url);
     });
+    applyFilters();
   }
 
   async function render(container, moduleId) {
@@ -304,6 +438,7 @@
       if (moduleId === "usuarios-admin") renderUsers(container);
       if (moduleId === "macros-admin") await renderMacros(container);
       if (moduleId === "atet-admin") await renderAtet(container);
+      if (moduleId === "roles-permisos-admin") renderRolesPermissions(container);
       if (moduleId === "parametros-admin") await renderParameters(container);
       if (moduleId === "auditoria-admin") renderAudit(container, false);
       if (moduleId === "bitacora-admin") renderAudit(container, true);

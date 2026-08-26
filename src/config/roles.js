@@ -34,6 +34,7 @@
       { id: "usuarios-admin", label: "Usuarios", icon: "users" },
       { id: "macros-admin", label: "Macros", icon: "users" },
       { id: "atet-admin", label: "ATET", icon: "file" },
+      { id: "roles-permisos-admin", label: "Roles y permisos", icon: "shield" },
       { id: "parametros-admin", label: "Parámetros generales", icon: "settings" },
       { id: "auditoria-admin", label: "Historial de actividades", icon: "history" },
       { id: "bitacora-admin", label: "Bitácora del sistema", icon: "inbox" },

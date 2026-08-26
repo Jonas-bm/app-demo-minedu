@@ -21,6 +21,7 @@
     const registrations = getRegistrations();
     registrations.push(atet);
     localStorage.setItem(registrationsKey, JSON.stringify(registrations));
+    recordAudit({ entidad: "ATET", entidadId: atet.codigo || atet.id, accion: "crear", detalle: `Registró el ATET ${atet.codigo || atet.id}.`, nivel: "exito" });
   }
 
   function addRegistrations(atets) {
@@ -28,6 +29,7 @@
     const registrations = getRegistrations();
     registrations.push(...atets);
     localStorage.setItem(registrationsKey, JSON.stringify(registrations));
+    recordAudit({ entidad: "importaciones", entidadId: `IMP-${Date.now()}`, accion: "importar", detalle: `Importó ${atets.length} registros ATET desde la plantilla Excel demo.`, nivel: "exito", nuevo: { cantidad: atets.length, codigos: atets.map((item) => item.codigo) } });
     return atets.length;
   }
 

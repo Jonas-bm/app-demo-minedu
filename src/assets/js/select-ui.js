@@ -4,6 +4,12 @@
 
   function close(control, restoreFocus = false) {
     if (!control) return;
+    if (control.portaled) {
+      control.list.classList.remove("is-portaled");
+      control.list.removeAttribute("style");
+      control.wrapper.append(control.list);
+      control.portaled = false;
+    }
     control.wrapper.classList.remove("is-open");
     control.trigger.setAttribute("aria-expanded", "false");
     if (opened === control) opened = null;
@@ -51,6 +57,19 @@
     if (control.trigger.disabled) return;
     if (opened && opened !== control) close(opened);
     rebuild(control);
+    if (control.select.closest("dialog")) {
+      const rect = control.trigger.getBoundingClientRect();
+      const availableBelow = global.innerHeight - rect.bottom;
+      const estimatedHeight = Math.min(280, (control.select.options.length * 40) + 12);
+      const openAbove = availableBelow < estimatedHeight + 12 && rect.top > availableBelow;
+      control.portaled = true;
+      document.body.append(control.list);
+      control.list.classList.add("is-portaled");
+      control.list.style.left = `${rect.left}px`;
+      control.list.style.width = `${rect.width}px`;
+      control.list.style.top = openAbove ? "auto" : `${rect.bottom + 6}px`;
+      control.list.style.bottom = openAbove ? `${global.innerHeight - rect.top + 6}px` : "auto";
+    }
     control.wrapper.classList.add("is-open");
     control.trigger.setAttribute("aria-expanded", "true");
     opened = control;
@@ -125,7 +144,7 @@
   }
 
   document.addEventListener("pointerdown", (event) => {
-    if (opened && !opened.wrapper.contains(event.target)) close(opened);
+    if (opened && !opened.wrapper.contains(event.target) && !opened.list.contains(event.target)) close(opened);
   });
   document.addEventListener("click", () => queueMicrotask(() => {
     document.querySelectorAll("select[data-custom-select='true']").forEach((select) => sync(select._customSelectControl));

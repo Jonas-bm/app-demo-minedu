@@ -84,6 +84,7 @@
     "usuarios-admin": { title: "Usuarios", description: "Administra usuarios y accesos ficticios de la demostración." },
     "macros-admin": { title: "Macros", description: "Consulta grupos Macro y sus ATET asignados." },
     "atet-admin": { title: "Administración de ATET", description: "Corrige o desactiva registros demo con trazabilidad." },
+    "roles-permisos-admin": { title: "Roles y permisos", description: "Consulta el flujo de trabajo y la matriz de permisos de cada rol." },
     "parametros-admin": { title: "Parámetros generales", description: "Consulta los catálogos y los ocho productos configurados." },
     "auditoria-admin": { title: "Historial de actividades", description: "Consulta las acciones funcionales registradas en la demo." },
     "bitacora-admin": { title: "Bitácora del sistema", description: "Consulta accesos, procesos, advertencias y errores simulados." }
