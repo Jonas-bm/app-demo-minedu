@@ -1381,8 +1381,10 @@ button, a { font: inherit; }
 .report-preview__signature { display: grid; justify-items: center; width: min(100%, 330px); gap: 0.35rem; margin: 4rem auto 0; text-align: center; }
 .report-preview__signature > span { width: 100%; border-top: 1px solid #596273; }
 .report-preview__signature small { color: #8a4d08; }
-.report-preview__actions { display: flex; align-items: center; justify-content: flex-end; gap: 1rem; margin-top: 1.25rem; }
+.report-preview__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 1rem; margin-top: 1.25rem; }
 .report-preview__actions .registration-form__status { margin: 0; }
+.report-confirm-modal { width: min(92vw, 460px); }
+.report-confirm-modal .admin-user-modal__body p { margin: 0; color: var(--text); line-height: 1.6; }
 .official-report { color: #17191d; font-family: Arial, sans-serif; font-size: 0.88rem; line-height: 1.65; }
 .official-report__letterhead { margin-bottom: 2rem; text-align: center; }
 .official-report__letterhead p { margin: 0.15rem 0; font-size: 0.76rem; }
@@ -1397,15 +1399,28 @@ button, a { font: inherit; }
 .official-report section > h4 { margin: 2rem 0 0.85rem; color: #111; font-size: 0.9rem; text-decoration: underline; }
 .official-report section > p { color: #111; text-align: justify; }
 .official-report__service { padding: 0.75rem; border: 1px solid #596273; background: #f8f8f8; }
+.official-report__antecedents { margin: 0; padding-left: 2.4rem; list-style: none; counter-reset: antecedent; }
+.official-report__antecedents li { position: relative; margin: 0 0 0.85rem; color: #111; text-align: justify; }
+.official-report__antecedents li::before { counter-increment: antecedent; content: "1." counter(antecedent); position: absolute; left: -2.4rem; font-weight: 700; }
 .official-report__table-wrap { width: 100%; margin: 1rem 0 1.5rem; overflow-x: auto; }
 .official-report__table { width: 100%; min-width: 700px; border-collapse: collapse; color: #111; font-size: 0.72rem; line-height: 1.4; }
 .official-report__table th, .official-report__table td { padding: 0.65rem; border: 1px solid #4c4c4c; vertical-align: top; }
 .official-report__table th { background: #ececec; text-align: center; }
-.official-report__table--products { min-width: 940px; }
-.official-report__table--products th:nth-child(1) { width: 32%; }
-.official-report__table--products th:nth-child(2) { width: 12%; }
-.official-report__table--products th:nth-child(3) { width: 40%; }
-.official-report__table--products th:nth-child(4) { width: 16%; }
+.official-report__table--activities { min-width: 780px; }
+.official-report__table--activities th:nth-child(1) { width: 26%; }
+.official-report__table--activities th:nth-child(2) { width: 56%; }
+.official-report__table--activities th:nth-child(3) { width: 18%; }
+.official-report__table--observed { min-width: 820px; }
+.official-report__table--observed th:nth-child(1) { width: 24%; }
+.official-report__table--observed th:nth-child(2) { width: 38%; }
+.official-report__table--observed th:nth-child(3) { width: 38%; }
+.official-report__table--products { min-width: 1040px; }
+.official-report__table--products th:nth-child(1) { width: 20%; }
+.official-report__table--products th:nth-child(2) { width: 24%; }
+.official-report__table--products th:nth-child(3) { width: 12%; }
+.official-report__table--products th:nth-child(4) { width: 30%; }
+.official-report__table--products th:nth-child(5) { width: 14%; }
+.official-report__service-cell { background: #f6f6f6; font-weight: 700; vertical-align: middle !important; }
 .official-report__result, .official-report__pages { text-align: center; vertical-align: middle !important; font-weight: 700; }
 .official-report__observation { color: #8d1f1f; font-weight: 700; }
 .official-report__signature { display: grid; justify-items: center; width: min(100%, 340px); gap: 0.3rem; margin: 5rem auto 0; text-align: center; }

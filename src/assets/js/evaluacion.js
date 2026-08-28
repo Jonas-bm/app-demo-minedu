@@ -53,7 +53,9 @@
       respuestas: responses,
       observaciones: observations,
       paginas: Object.fromEntries(global.DEMO_EVALUATION_CONFIG.items.map((item, index) => [item.id, { inicio: 10 + (index * 10), fin: 19 + (index * 10) }])),
-      motivo: observed ? "La demostración presenta actividades que requieren mayor sustento y precisión." : "",
+      motivo: observed
+        ? (global.DEMO_REPORT_CONFIG?.resultadoInforme?.observada || "Observado presenta actividades que requieren mayor sustento y precisión")
+        : (global.DEMO_REPORT_CONFIG?.resultadoInforme?.conforme || "Conforme cumple con las 8 actividades"),
       evaluadoPor: deliverable.evaluacion.evaluador || "Macro Demo",
       evaluadoEn: deliverable.evaluacion.fecha,
       demoReconstructed: true
@@ -154,8 +156,11 @@
     });
     criteriaSection.append(criteriaTitle, criteriaGrid);
     motiveSection.className = "evaluation-detail__section evaluation-detail__motive";
-    motiveTitle.textContent = "Motivo de observación";
-    motiveText.textContent = evaluation.motivo || "No corresponde para una evaluación conforme.";
+    motiveTitle.textContent = "Resultado de Informe";
+    const reportOutcome = global.DEMO_REPORT_CONFIG?.resultadoInforme || {};
+    motiveText.textContent = evaluation.resultado === "conforme"
+      ? (reportOutcome.conforme || "Conforme cumple con las 8 actividades")
+      : (reportOutcome.observada || "Observado presenta actividades que requieren mayor sustento y precisión");
     motiveSection.append(motiveTitle, motiveText);
     historySection.className = "evaluation-detail__section";
     historyTitle.textContent = "Historial y versiones";
