@@ -119,7 +119,7 @@ button, a { font: inherit; }
 
 .dite-brand, .user-menu, .user-menu__details { display: flex; min-width: 0; align-items: center; }
 .dite-brand { gap: 1.25rem; }
-.dite-brand strong { font-size: clamp(2rem, 3vw, 2.75rem); line-height: 1; }
+.dite-brand strong { font-size: clamp(1.5rem, 2.2vw, 2rem); line-height: 1; letter-spacing: 0.04em; }
 .dite-brand span { font-size: 0.85rem; font-weight: 700; }
 .user-menu { gap: 1.25rem; }
 .user-menu__details { gap: 2rem; }
@@ -1461,6 +1461,13 @@ button, a { font: inherit; }
 .deliverable-state__heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .deliverable-state__heading h3 { margin: 0; color: var(--navy); font-size: 1.1rem; }
 .deliverable-state__heading p { color: var(--navy); font-size: 0.85rem; font-weight: 700; }
+.deliverable-state__heading-meta { display: flex; align-items: center; gap: 0.85rem; }
+.deliverable-state__pdf { padding: 0.5rem 0.95rem; font-size: 0.82rem; white-space: nowrap; }
+.deliverable-state__pdf::before { content: "⬇"; margin-right: 0.4rem; font-size: 0.9em; }
+@media (max-width: 620px) {
+  .deliverable-state__heading-meta { width: 100%; flex-direction: column; align-items: flex-start; }
+  .deliverable-state__pdf { width: 100%; }
+}
 .deliverable-state__filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 0.85rem; margin-top: 1.25rem; padding: 1rem; border: 1px solid var(--border); border-radius: 9px; background: #f8fafc; }
 .deliverable-state__filters .atet-filters__clear { justify-self: start; }
 .deliverable-state__summary-wrapper { margin-top: 1.25rem; }
@@ -1749,7 +1756,7 @@ button, a { font: inherit; }
   .admin-year-parameter { align-items: stretch; flex-direction: column; }
   .admin-year-parameter label { flex-basis: auto; }
   .evaluation-item__pages { grid-template-columns: 1fr; }
-  .dite-brand strong { font-size: 1.75rem; }
+  .dite-brand strong { font-size: 1.35rem; }
   .user-menu { gap: 0.5rem; }
   .user-menu__details { font-size: 0.85rem; }
   .user-menu__avatar { display: none; }
