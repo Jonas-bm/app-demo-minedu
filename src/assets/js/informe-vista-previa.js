@@ -63,8 +63,46 @@
     return { resultado: deliverable.evaluacion.estado, respuestas, observaciones, paginas, evaluadoPor: deliverable.evaluacion.evaluador || "Macro Demo", evaluadoEn: deliverable.evaluacion.fecha };
   }
 
-  function createReportNumber(deliverable, reports) {
-    return `INF-DEMO-${deliverable.periodoId.replace("-", "")}-${String(reports.length + 1).padStart(3, "0")}`;
+  // Ordinales del entregable. El número proviene del dato del sistema
+  // (deliverable.numero): un mes = un entregable, por lo que el segundo mes de
+  // continuidad es el SEGUNDO ENTREGABLE, el tercero el TERCER ENTREGABLE, etc.
+  const DELIVERABLE_ORDINALS = ["", "PRIMER", "SEGUNDO", "TERCER", "CUARTO", "QUINTO", "SEXTO", "SÉPTIMO", "OCTAVO", "NOVENO", "DÉCIMO", "UNDÉCIMO", "DUODÉCIMO"];
+
+  function deliverableLabel(number, casing = "upper") {
+    const word = DELIVERABLE_ORDINALS[number] || `${number}.°`;
+    const text = `${word} ENTREGABLE`;
+    if (casing === "lower") return text.toLowerCase();
+    if (casing === "title") return text.charAt(0) + text.slice(1).toLowerCase();
+    return text;
+  }
+
+  // Número institucional simulado del informe. Los modelos de la carpeta docs
+  // (INFORME DE CONFORMIDAD-01666-… y de OBSERVACION-03166-…) usan 5 dígitos con
+  // ceros a la izquierda, así que se genera un correlativo de cinco dígitos
+  // estable por entregable con el mismo formato "NNNNN-AAAA-MINEDU/VMGP-DITE".
+  function hashSeed(text) {
+    let hash = 0x811c9dc5;
+    for (let index = 0; index < text.length; index += 1) {
+      hash = Math.imul(hash ^ text.charCodeAt(index), 0x01000193) >>> 0;
+    }
+    hash ^= hash >>> 15; hash = Math.imul(hash, 0x2c1b3c6d) >>> 0;
+    hash ^= hash >>> 12; hash = Math.imul(hash, 0x297a2d39) >>> 0;
+    hash ^= hash >>> 15;
+    return hash >>> 0;
+  }
+
+  function simulatedReportNumber(deliverable) {
+    const year = Number(String(deliverable.periodoId).split("-")[0]) || new Date().getFullYear();
+    const digits = String((hashSeed(deliverable.id) % 99999) + 1).padStart(5, "0");
+    return `${digits}-${year}-MINEDU/VMGP-DITE`;
+  }
+
+  function createReportNumber(deliverable) {
+    return `INFORME N.° ${simulatedReportNumber(deliverable)}`;
+  }
+
+  function reportFileName(deliverable) {
+    return `${createReportNumber(deliverable).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}.html`;
   }
 
   function downloadReport(report) {
@@ -103,14 +141,15 @@
   function conformityAnalysis(evaluation, values) {
     const items = global.DEMO_EVALUATION_CONFIG.items;
     const analysis = global.DEMO_REPORT_CONFIG.analisis.conforme;
+    const entregable = escape(values.entregable);
     const activities = items.map((item, index) => `<tr>${index === 0 ? serviceCell(items.length, values.servicio) : ""}<td>${escape(item.activity)}</td><td class="official-report__result">${evaluation.respuestas?.[item.id] === "no-cumple" ? "No cumple" : "Cumple"}</td></tr>`).join("");
     const products = items.map((item, index) => `<tr>${index === 0 ? serviceCell(items.length, values.servicio) : ""}<td>${escape(item.product)}</td><td class="official-report__result">${evaluation.respuestas?.[item.id] === "no-cumple" ? "No cumple" : "Cumple"}</td><td>${escape(evaluation.observaciones?.[item.id] || "Se presenta el producto solicitado en esta simulación.")}</td><td class="official-report__pages">${escape(pageRange(evaluation, item))}</td></tr>`).join("");
     return `<p class="report-editable">${escape(fill(analysis.plazo, values))}</p>
-      <p class="report-editable">${escape(analysis.evaluacion)}</p>
-      <p>${escape(analysis.introActividades)}</p>
-      <div class="official-report__table-wrap"><table class="official-report__table official-report__table--activities"><thead><tr><th>Denominación del Servicio</th><th>SEGUNDO ENTREGABLE (Actividades)</th><th>Cumplimiento según TDR<br>(Cumple / No cumple)</th></tr></thead><tbody>${activities}</tbody></table></div>
-      <p>${escape(analysis.introProductos)}</p>
-      <div class="official-report__table-wrap"><table class="official-report__table official-report__table--products"><thead><tr><th>Denominación del Servicio</th><th>SEGUNDO ENTREGABLE (Productos)</th><th>Cumplimiento según TDR<br>(Cumple / No cumple)</th><th>Análisis del producto entregado</th><th>N.° de páginas donde se identifica el producto</th></tr></thead><tbody>${products}</tbody></table></div>`;
+      <p class="report-editable">${escape(fill(analysis.evaluacion, values))}</p>
+      <p>${escape(fill(analysis.introActividades, values))}</p>
+      <div class="official-report__table-wrap"><table class="official-report__table official-report__table--activities"><thead><tr><th>Denominación del Servicio</th><th>${entregable} (Actividades)</th><th>Cumplimiento según TDR<br>(Cumple / No cumple)</th></tr></thead><tbody>${activities}</tbody></table></div>
+      <p>${escape(fill(analysis.introProductos, values))}</p>
+      <div class="official-report__table-wrap"><table class="official-report__table official-report__table--products"><thead><tr><th>Denominación del Servicio</th><th>${entregable} (Productos)</th><th>Cumplimiento según TDR<br>(Cumple / No cumple)</th><th>Análisis del producto entregado</th><th>N.° de páginas donde se identifica el producto</th></tr></thead><tbody>${products}</tbody></table></div>`;
   }
 
   function observedAnalysis(evaluation, values) {
@@ -123,7 +162,7 @@
     }).join("");
     return `<p class="report-editable">${escape(fill(analysis.intro, values))}</p>
       <p class="report-editable">${escape(fill(analysis.detalle, values))}</p>
-      <div class="official-report__table-wrap"><table class="official-report__table official-report__table--observed"><thead><tr><th>Denominación del Servicio</th><th>SEGUNDO ENTREGABLE (Productos)</th><th>Observaciones</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="official-report__table-wrap"><table class="official-report__table official-report__table--observed"><thead><tr><th>Denominación del Servicio</th><th>${escape(values.entregable)} (Productos)</th><th>Observaciones</th></tr></thead><tbody>${rows}</tbody></table></div>
       <p class="report-editable">${escape(fill(analysis.cierre, values))}</p>`;
   }
 
@@ -134,7 +173,7 @@
   function buildDocument({ deliverable, evaluation, atet, serviceName, existingReport }) {
     const observed = evaluation.resultado === "observada";
     const config = global.DEMO_REPORT_CONFIG;
-    const number = existingReport?.numero || "INFORME N.° PENDIENTE-DEMO";
+    const number = existingReport?.numero || createReportNumber(deliverable);
     const issueDate = existingReport?.fecha ? `Lima, ${formatDate(existingReport.fecha)}` : "Lima, fecha pendiente de asignar (demo)";
     const locador = deliverable.atet.nombreCompleto;
     const presentationDate = formatDate(deliverable.presentacion?.fecha);
@@ -142,10 +181,13 @@
     const orderDate = formatDate(deliverable.contrato.fechaInicio);
     const onTime = !deliverable.presentacion?.fecha || deliverable.presentacion.fecha <= deliverable.fechaMaxima;
     const count = global.DEMO_EVALUATION_CONFIG.items.filter((item) => evaluation.respuestas?.[item.id] === "no-cumple").length;
-    const subject = observed ? `OBSERVACIONES AL SEGUNDO ENTREGABLE DEL ${serviceName}` : `CONFORMIDAD DEL SEGUNDO ENTREGABLE DEL ${serviceName}`;
+    const entregableLabel = deliverableLabel(deliverable.numero);
+    const subject = observed ? `OBSERVACIONES AL ${entregableLabel} DEL ${serviceName}` : `CONFORMIDAD DEL ${entregableLabel} DEL ${serviceName}`;
 
     const values = {
       locador, servicio: serviceName,
+      entregable: entregableLabel,
+      entregableTitulo: deliverableLabel(deliverable.numero, "title"),
       ordenServicio: deliverable.contrato.ordenServicio,
       fechaOrden: orderDate,
       fechaPresentacion: presentationDate,
@@ -261,20 +303,19 @@
         if (current) { downloadReport(current); status.textContent = `Se descargó ${current.referencia}.`; return; }
         const confirmed = await confirmDialog({
           title: "Generar informe",
-          message: "¿Deseas generar el informe del segundo entregable con la información mostrada?",
+          message: `¿Deseas generar el informe del ${deliverableLabel(deliverable.numero, "lower")} con la información mostrada?`,
           confirmLabel: "Generar informe"
         });
         if (!confirmed || !isCurrent()) return;
         generate.disabled = true;
         paper.querySelectorAll(".report-editable").forEach((element) => { element.contentEditable = "false"; element.classList.remove("is-editable"); });
-        const reports = global.DEMO_STORE.getReports();
         const session = JSON.parse(sessionStorage.getItem("demoSession") || "null");
         const generatedAt = new Date().toISOString();
-        const number = createReportNumber(deliverable, reports);
+        const number = createReportNumber(deliverable);
         paper.querySelector("[data-report-number]").textContent = number;
         paper.querySelector("[data-report-date]").textContent = `Lima, ${formatDate(generatedAt)}`;
         paper.querySelector("[data-report-signature]").textContent = `${session?.nombre || "Gestor Demo"} · firma simulada`;
-        const report = { id: `report-${deliverable.id}`, entregableId: deliverable.id, numero: number, tipo: evaluation.resultado, templateVersion: global.DEMO_REPORT_CONFIG.version, fecha: generatedAt.slice(0, 10), autor: session?.nombre || "Gestor Demo", estado: "generado", referencia: `${number.toLowerCase()}.html`, generadoEn: generatedAt, contenidoHtml: downloadableHtml(number, paper) };
+        const report = { id: `report-${deliverable.id}`, entregableId: deliverable.id, numero: number, tipo: evaluation.resultado, templateVersion: global.DEMO_REPORT_CONFIG.version, fecha: generatedAt.slice(0, 10), autor: session?.nombre || "Gestor Demo", estado: "generado", referencia: reportFileName(deliverable), generadoEn: generatedAt, contenidoHtml: downloadableHtml(number, paper) };
         global.DEMO_STORE.saveReport(report);
         generate.disabled = false; generate.textContent = "Descargar informe generado"; status.textContent = `Informe ${number} generado correctamente.`; downloadReport(report);
       });

@@ -10,7 +10,7 @@
   ]);
 
   global.DEMO_REPORT_CONFIG = Object.freeze({
-    version: "demo-informes-v3", status: "simulacion",
+    version: "demo-informes-v4", status: "simulacion",
     warning: "Documento generado exclusivamente para esta demostración. La numeración, identidad, firma y contenido no tienen validez oficial.",
     titles: Object.freeze({ conforme: "INFORME DEMO DE CONFORMIDAD DEL ENTREGABLE", observada: "INFORME DEMO DE OBSERVACIONES AL ENTREGABLE" }),
     institutionalYear: "Simulación del Sistema de Gestión ATET — 2026",
@@ -29,20 +29,20 @@
       ]),
       observada: Object.freeze([
         'Con fecha {fechaOrden}, se emite y notifica la Orden de Servicio N.° {ordenServicio}, a nombre de {locador} para el "{servicio}".',
-        'El {fechaPresentacion}, el/la locador(a) {locador}, a través de MINEDU en Línea, remite el SEGUNDO ENTREGABLE de "{servicio}".'
+        'El {fechaPresentacion}, el/la locador(a) {locador}, a través de MINEDU en Línea, remite el {entregable} de "{servicio}".'
       ])
     }),
 
     // Sección II. ANÁLISIS.
     analisis: Object.freeze({
       conforme: Object.freeze({
-        plazo: "La locadora {locador} presentó el SEGUNDO ENTREGABLE el día {fechaPresentacion}, siendo la fecha máxima de entrega el día {fechaMaxima}. Por ello, el producto {resultadoPlazo}.",
-        evaluacion: "El presente entregable es evaluado de acuerdo con las actividades descritas indicadas en los términos de referencia. En ese sentido, para dar conformidad al SEGUNDO ENTREGABLE, se ha evaluado la consistencia del producto solicitado, de acuerdo con lo descrito en el mismo.",
-        introActividades: "De la evaluación realizada a las actividades ejecutadas, se evidencia que en el SEGUNDO ENTREGABLE se cumple con lo solicitado:",
-        introProductos: "De la evaluación del producto solicitado, se evidencia que el producto del SEGUNDO ENTREGABLE cumple con lo solicitado:"
+        plazo: "La locadora {locador} presentó el {entregable} el día {fechaPresentacion}, siendo la fecha máxima de entrega el día {fechaMaxima}. Por ello, el producto {resultadoPlazo}.",
+        evaluacion: "El presente entregable es evaluado de acuerdo con las actividades descritas indicadas en los términos de referencia. En ese sentido, para dar conformidad al {entregable}, se ha evaluado la consistencia del producto solicitado, de acuerdo con lo descrito en el mismo.",
+        introActividades: "De la evaluación realizada a las actividades ejecutadas, se evidencia que en el {entregable} se cumple con lo solicitado:",
+        introProductos: "De la evaluación del producto solicitado, se evidencia que el producto del {entregable} cumple con lo solicitado:"
       }),
       observada: Object.freeze({
-        intro: "Al respecto, de la revisión del SEGUNDO ENTREGABLE remitido por el locador, se determina que el mismo presenta {conteoTexto} {relacionadas} a las actividades descritas en los Términos de Referencia.",
+        intro: "Al respecto, de la revisión del {entregable} remitido por el locador, se determina que el mismo presenta {conteoTexto} {relacionadas} a las actividades descritas en los Términos de Referencia.",
         detalle: 'Es decir, el informe presentado por {locador} correspondiente al "{servicio}", fue revisado en función a las actividades indicadas en los términos de referencia, determinándose lo siguiente:',
         cierre: "Por lo expuesto, se requiere la subsanación de {conteoTexto}, mencionadas en el numeral 2.2 del presente informe, en un plazo máximo de {plazoDias} días calendario contados a partir de notificado al proveedor por parte de la Oficina de Logística."
       })
@@ -51,12 +51,12 @@
     // Sección III. CONCLUSIONES.
     conclusiones: Object.freeze({
       conforme: Object.freeze([
-        'El informe presentado en el SEGUNDO ENTREGABLE de la Orden de Servicio N.° {ordenServicio} del "{servicio}" ha cumplido con los Términos de Referencia, tanto en las actividades y productos requeridos, y se ha determinado que ha cumplido con la calidad, cantidad y condiciones contractuales.',
-        'Se otorga conformidad al SEGUNDO ENTREGABLE en el informe del "{servicio}", que cumple lo solicitado en la Orden de Servicio N.° {ordenServicio}.',
+        'El informe presentado en el {entregable} de la Orden de Servicio N.° {ordenServicio} del "{servicio}" ha cumplido con los Términos de Referencia, tanto en las actividades y productos requeridos, y se ha determinado que ha cumplido con la calidad, cantidad y condiciones contractuales.',
+        'Se otorga conformidad al {entregable} en el informe del "{servicio}", que cumple lo solicitado en la Orden de Servicio N.° {ordenServicio}.',
         "Se concluye que el Entregable presentado cumple con las actividades establecidas en el numeral 6 de los Términos de Referencia, lo cual permite brindar la Conformidad del servicio."
       ]),
       observada: Object.freeze([
-        'El SEGUNDO ENTREGABLE de la Orden de Servicio N.° {ordenServicio} del "{servicio}" presentado por {locador}, tiene {conteoTexto}. Por lo que, se determina observar el Segundo entregable presentado por el locador.',
+        'El {entregable} de la Orden de Servicio N.° {ordenServicio} del "{servicio}" presentado por {locador}, tiene {conteoTexto}. Por lo que, se determina observar el {entregableTitulo} presentado por el locador.',
         "En ese sentido, se requiere la subsanación de las observaciones en el plazo máximo de {plazoDias} días calendario contados a partir de notificado al proveedor por parte de la Oficina de Logística."
       ])
     }),
