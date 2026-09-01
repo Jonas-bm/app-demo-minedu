@@ -162,6 +162,12 @@
       const body = document.createElement("tbody");
       wrapperElement.className = "import-review-table-wrapper";
       table.className = "import-review-table";
+      const colgroup = document.createElement("colgroup");
+      ["fila", "codigo", "nombre", "region", "estado", "incidencias"].forEach((name) => {
+        const col = document.createElement("col");
+        col.className = `import-col--${name}`;
+        colgroup.append(col);
+      });
       caption.className = "sr-only";
       caption.textContent = final ? "Resultado final de la importación" : "Vista previa de filas validadas para importar";
       ["Fila", "Código ATET", "Nombres y apellidos", "Región y zona", "Estado", "Incidencias"].forEach((label) => {
@@ -173,17 +179,22 @@
       rows.forEach((row) => {
         const tableRow = document.createElement("tr");
         const values = [row.rowNumber, row.data.codigo || "—", row.data.nombresApellidos || "—", [row.data.region, row.data.zona].filter(Boolean).join(" · ") || "—"];
-        values.forEach((value) => {
+        values.forEach((value, cellIndex) => {
           const cell = document.createElement("td");
+          if (cellIndex === 2) cell.className = "import-cell--nombre";
           cell.textContent = value;
           tableRow.append(cell);
         });
         const statusCell = document.createElement("td");
         const issuesCell = document.createElement("td");
+        issuesCell.className = "import-cell--incidencias";
         const issues = row.errors.concat(row.warnings);
         statusCell.append(createRowStatus(row.status, final));
         if (!issues.length) {
-          issuesCell.textContent = "Sin incidencias";
+          const ok = document.createElement("span");
+          ok.className = "import-issues-none";
+          ok.textContent = "Sin incidencias";
+          issuesCell.append(ok);
         } else {
           const details = document.createElement("details");
           const summaryElement = document.createElement("summary");
@@ -208,7 +219,7 @@
         body.append(tableRow);
       });
       head.append(headRow);
-      table.append(caption, head, body);
+      table.append(caption, colgroup, head, body);
       wrapperElement.append(table);
       return wrapperElement;
     }
@@ -403,23 +414,23 @@
         importButton.textContent = "Importando…";
         try {
           const { existingAtets } = await loadValidationData();
-          const codes = new Set(existingAtets.map((item) => item.codigo.trim().toLocaleLowerCase("es")));
-          const dnis = new Set(existingAtets.map((item) => item.dni.trim()));
-          const zones = new Set(existingAtets.map((item) => item.zonaId));
+          const codes = new Set(existingAtets.map((item) => item.codigo.trim().toLocaleLowerCase("es")).filter(Boolean));
+          const dnis = new Set(existingAtets.map((item) => item.dni.trim()).filter(Boolean));
           const batchId = Date.now();
           const imported = [];
           const finalRows = rows.map((row) => ({ ...row, errors: [...row.errors], warnings: [...row.warnings] }));
           finalRows.filter((row) => row.status !== config.rowStatuses.blocked).forEach((row) => {
             const code = row.data.codigo.trim().toLocaleLowerCase("es");
             const dni = row.data.dni.trim();
-            if (codes.has(code) || dnis.has(dni) || zones.has(row.data.zonaId)) {
+            // Maqueta: solo se evita duplicar un código o DNI ya existente; el
+            // resto de la fila se importa sin incidencias (ver AV-029).
+            if ((code && codes.has(code)) || (dni && dnis.has(dni))) {
               row.status = config.rowStatuses.blocked;
-              row.errors.push({ column: "Registro", message: "Código, DNI o zona duplicados al confirmar la importación." });
+              row.errors.push({ column: "Registro", message: "El código o el DNI ya existe en otro ATET registrado." });
               return;
             }
-            codes.add(code);
-            dnis.add(dni);
-            zones.add(row.data.zonaId);
+            if (code) codes.add(code);
+            if (dni) dnis.add(dni);
             imported.push(createRegistrationFromRow(row, batchId));
           });
           global.DEMO_STORE.addRegistrations(imported);

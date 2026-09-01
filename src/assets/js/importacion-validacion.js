@@ -118,14 +118,10 @@
     return "";
   }
 
-  function counts(values) {
-    return values.reduce((map, value) => {
-      const key = normalize(value);
-      if (key) map.set(key, (map.get(key) || 0) + 1);
-      return map;
-    }, new Map());
-  }
-
+  // Maqueta: la importación es una demostración y NO bloquea filas. Cada fila se
+  // acepta "Sin incidencias"; solo se resuelve la ubicación territorial contra el
+  // catálogo (o el valor más cercano) y se calculan ámbito y denominación. Ver
+  // AV-029 en docs/MAPA_DE_CAMBIOS.md.
   function validateWorkbook(workbook, existingAtets, catalogs) {
     const expectedHeaders = global.ATET_IMPORT_CONFIG.columns.map((column) => column.header);
     if (workbook.headers.length !== expectedHeaders.length || expectedHeaders.some((header, index) => workbook.headers[index] !== header)) {
@@ -138,72 +134,44 @@
       rowNumber: index + 2,
       data: Object.fromEntries(keys.map((key, cellIndex) => [key, values[cellIndex] || ""]))
     }));
-    const codeCounts = counts(rawRows.map((row) => row.data.codigo));
-    const dniCounts = counts(rawRows.map((row) => row.data.dni));
-    const sinadCounts = counts(rawRows.map((row) => row.data.sinad));
-    const orderCounts = counts(rawRows.map((row) => row.data.ordenServicio));
-    const zoneCounts = counts(rawRows.map((row) => `${row.data.region}|${row.data.zona}`));
-    const existingCodes = new Set(existingAtets.map((item) => normalize(item.codigo)));
-    const existingDnis = new Set(existingAtets.map((item) => normalize(item.dni)));
-    const existingSinads = new Set(existingAtets.map((item) => normalize(item.sinad)));
-    const existingOrders = new Set(existingAtets.map((item) => normalize(item.ordenServicio)));
-    const regions = new Map(catalogs.regiones.map((item) => [normalize(item.nombre), item]));
+
+    const regionsByName = new Map(catalogs.regiones.map((item) => [normalize(item.nombre), item]));
     const scopes = new Map(catalogs.ambitos.map((item) => [item.id, item]));
     const zones = catalogs.zonas;
-    const occupiedZones = new Set(existingAtets.map((item) => item.zonaId));
+    const macroRegionId = global.MACRO_CONTEXT ? global.MACRO_CONTEXT.get().regionId : null;
+    const fallbackRegion = catalogs.regiones.find((item) => item.id === macroRegionId) || catalogs.regiones[0];
 
     return rawRows.map(({ rowNumber, data }) => {
-      const errors = [];
-      const warnings = [];
-      const addError = (column, message) => errors.push({ column, message });
-      const addWarning = (column, message) => warnings.push({ column, message });
-      global.ATET_IMPORT_CONFIG.columns.filter((column) => column.input).forEach((column) => {
-        if (!String(data[column.key]).trim()) addError(column.header, "Campo obligatorio vacío.");
-      });
-
-      const code = normalize(data.codigo);
-      const dni = normalize(data.dni);
-      if (code && (existingCodes.has(code) || codeCounts.get(code) > 1)) addError("Código ATET", "Código duplicado.");
-      if (dni && !/^\d{8}$/.test(data.dni)) addError("DNI", "Debe contener exactamente 8 dígitos.");
-      else if (dni && (existingDnis.has(dni) || dniCounts.get(dni) > 1)) addError("DNI", "DNI duplicado.");
-      if (data.celular && !/^9\d{8}$/.test(data.celular)) addError("Celular", "Debe contener 9 dígitos y empezar en 9.");
-      if (data.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.correo)) addError("Correo", "Formato de correo inválido.");
-      else if (data.correo && !/@(?:[a-z0-9-]+\.)*gob\.pe$/i.test(data.correo)) addWarning("Correo", "El dominio no es institucional.");
-      if (data.sinad && (existingSinads.has(normalize(data.sinad)) || sinadCounts.get(normalize(data.sinad)) > 1)) addWarning("SINAD", "SINAD repetido; requiere revisión.");
-      if (data.ordenServicio && (existingOrders.has(normalize(data.ordenServicio)) || orderCounts.get(normalize(data.ordenServicio)) > 1)) addWarning("Orden de Servicio", "Orden de servicio repetida.");
-
-      const region = regions.get(normalize(data.region));
-      const scope = region ? scopes.get(region.ambitoId) : null;
-      if (data.region && !region) addError("Región", "No pertenece al catálogo de demostración.");
-      const zone = region ? zones.find((item) => item.regionId === region.id && normalize(item.nombre) === normalize(data.zona)) : null;
-      if (data.zona && region && !zone) addError("Zona", "No corresponde a la región indicada.");
-      else if (zone && (occupiedZones.has(zone.id) || !zone.disponible)) addError("Zona", "La zona ya está asignada.");
-      else if (zone && zoneCounts.get(normalize(`${data.region}|${data.zona}`)) > 1) addError("Zona", "La zona se repite dentro del archivo.");
-      if (scope && data.ambito && normalize(data.ambito) !== normalize(scope.nombre)) addWarning("Ámbito", "Se reemplazará por el ámbito calculado.");
-
-      const startDate = parseDate(data.fechaInicio);
-      const endDate = parseDate(data.fechaTermino);
-      if (data.fechaInicio && !startDate) addError("Fecha de inicio", "Fecha inválida.");
-      if (data.fechaTermino && !endDate) addError("Fecha de término", "Fecha inválida.");
-      if (startDate && endDate && endDate < startDate) addError("Fecha de término", "No puede ser anterior a la fecha de inicio.");
+      const region = regionsByName.get(normalize(data.region)) || fallbackRegion;
+      const scope = scopes.get(region.ambitoId) || catalogs.ambitos[0];
+      const regionZones = zones.filter((item) => item.regionId === region.id);
+      const digits = String(data.zona).replace(/\D/g, "");
+      const zone = regionZones.find((item) => normalize(item.nombre) === normalize(data.zona))
+        || (digits && regionZones.find((item) => String(item.numero) === digits))
+        || regionZones[0]
+        || null;
 
       const normalizedData = {
         ...data,
-        ambito: scope?.nombre || "",
-        regionId: region?.id || "",
-        zonaId: zone?.id || "",
-        fechaInicio: startDate,
-        fechaTermino: endDate,
+        region: region.nombre,
+        zona: zone ? zone.nombre : data.zona,
+        ambito: scope ? scope.nombre : "",
+        regionId: region.id,
+        zonaId: zone ? zone.id : "",
+        fechaInicio: parseDate(data.fechaInicio),
+        fechaTermino: parseDate(data.fechaTermino),
         denominacion: region && scope && zone
           ? global.SERVICE_DENOMINATION.generate({ region: region.nombre, scope: scope.nombre, zoneNumber: zone.numero })
           : ""
       };
-      const status = errors.length
-        ? global.ATET_IMPORT_CONFIG.rowStatuses.blocked
-        : warnings.length
-          ? global.ATET_IMPORT_CONFIG.rowStatuses.warning
-          : global.ATET_IMPORT_CONFIG.rowStatuses.valid;
-      return { rowNumber, data: normalizedData, errors, warnings, status };
+
+      return {
+        rowNumber,
+        data: normalizedData,
+        errors: [],
+        warnings: [],
+        status: global.ATET_IMPORT_CONFIG.rowStatuses.valid
+      };
     });
   }
 

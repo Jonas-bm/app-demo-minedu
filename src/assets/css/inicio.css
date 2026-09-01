@@ -1153,14 +1153,22 @@ button, a { font: inherit; }
 .import-review__heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
 .import-review__heading p { color: var(--navy); font-weight: 700; }
 .import-review-table-wrapper { max-width: 100%; overflow-x: auto; }
-.import-review-table { width: 100%; min-width: 980px; border-collapse: collapse; font-size: 0.82rem; }
+.import-review-table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 0.82rem; table-layout: fixed; }
 .import-review-table th,
-.import-review-table td { padding: 0.8rem 0.7rem; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.import-review-table td { padding: 0.75rem 0.7rem; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; overflow-wrap: anywhere; }
 .import-review-table th { background: #f3f6f9; color: #455164; font-size: 0.76rem; white-space: nowrap; }
-.import-review-table details { min-width: 170px; }
+.import-review-table col.import-col--fila { width: 8%; }
+.import-review-table col.import-col--codigo { width: 15%; }
+.import-review-table col.import-col--nombre { width: 27%; }
+.import-review-table col.import-col--region { width: 20%; }
+.import-review-table col.import-col--estado { width: 14%; }
+.import-review-table col.import-col--incidencias { width: 16%; }
+.import-review-table td.import-cell--nombre { text-align: left; }
+.import-issues-none { color: #17633f; font-weight: 600; white-space: nowrap; }
+.import-review-table details { display: inline-block; text-align: left; }
 .import-review-table summary { color: var(--navy); cursor: pointer; font-weight: 700; }
 .import-review-table details:focus-within { outline: 3px solid rgba(43, 108, 176, 0.2); outline-offset: 2px; }
-.import-review-table ul { display: grid; gap: 0.4rem; margin: 0.6rem 0 0; padding-left: 1.1rem; }
+.import-review-table ul { display: grid; gap: 0.4rem; margin: 0.5rem 0 0; padding-left: 1.1rem; }
 .import-review-table li { line-height: 1.35; }
 .import-review-table li.is-error { color: #8d1f1f; }
 .import-review-table li.is-warning { color: #805113; }

@@ -428,9 +428,11 @@
       });
 
       const requestedDefault = effectiveDashboardData.periodoPredeterminado;
-      select.value = availablePeriods.some((period) => period.id === requestedDefault)
+      const defaultHasDeliverables = availablePeriods.some((period) => period.id === requestedDefault && period.entregables.length > 0);
+      const firstWithDeliverables = availablePeriods.find((period) => period.entregables.length > 0);
+      select.value = defaultHasDeliverables
         ? requestedDefault
-        : availablePeriods[0].id;
+        : (firstWithDeliverables || availablePeriods[0]).id;
 
       function updatePeriod() {
         const period = availablePeriods.find((item) => item.id === select.value);

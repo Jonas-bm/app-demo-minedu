@@ -217,7 +217,15 @@
 
     try {
       const catalogs = await loadCatalogs();
-      catalogs.regiones.forEach((region) => {
+      // Un Macro creado por el Administrador solo registra ATET en las regiones
+      // que tiene asignadas; el número de zonas disponibles en cada región es su
+      // cupo asignado (Zona 1, Zona 2, …). El Macro demo ve todas las regiones.
+      const context = global.MACRO_CONTEXT ? global.MACRO_CONTEXT.get() : null;
+      const scopedToMacro = Boolean(context && !context.isDemoMacro && context.regionIds && context.regionIds.length);
+      const allowedRegions = scopedToMacro
+        ? catalogs.regiones.filter((region) => context.regionIds.includes(region.id))
+        : catalogs.regiones;
+      allowedRegions.forEach((region) => {
         const option = document.createElement("option");
         option.value = region.id;
         option.textContent = region.nombre;
@@ -226,13 +234,23 @@
       regionSelect.disabled = false;
       status.textContent = "";
 
-      function updateLocation() {
+      function zonesForRegion(region) {
+        if (!region) return [];
+        const all = catalogs.zonas
+          .filter((item) => item.regionId === region.id)
+          .sort((a, b) => a.numero - b.numero);
+        const quota = scopedToMacro ? context.quotaByRegion[region.id] : null;
+        return quota ? all.slice(0, Math.min(quota, all.length)) : all;
+      }
+
+      function updateLocation({ keepZone = false } = {}) {
         const region = catalogs.regiones.find((item) => item.id === regionSelect.value);
         const scope = catalogs.ambitos.find((item) => item.id === region?.ambitoId);
-        const zones = region ? catalogs.zonas.filter((item) => item.regionId === region.id) : [];
+        const zones = zonesForRegion(region);
         const locallyOccupiedZones = new Set(global.DEMO_STORE.getRegistrations().map((atet) => atet.zonaId));
         const isAvailable = (zone) => zone.disponible && !locallyOccupiedZones.has(zone.id);
-        const availableZones = zones.filter(isAvailable).length;
+        const availableZones = zones.filter(isAvailable);
+        const previousZone = zoneSelect.value;
         scopeInput.value = scope?.nombre || "";
         zoneSelect.replaceChildren();
         const placeholder = document.createElement("option");
@@ -248,12 +266,20 @@
           zoneSelect.append(option);
         });
         zoneSelect.disabled = !region;
+        // Al elegir región se preselecciona la primera zona libre ("van tomando
+        // las primeras zonas"); al re-render por otro motivo se conserva la zona.
+        if (keepZone && zones.some((zone) => zone.id === previousZone && isAvailable(zone))) {
+          zoneSelect.value = previousZone;
+        } else if (availableZones.length) {
+          zoneSelect.value = availableZones[0].id;
+        }
         denominationInput.value = "";
         zoneHelp.textContent = region
-          ? `${availableZones} de ${zones.length} zonas disponibles en ${region.nombre}.`
+          ? `${availableZones.length} de ${zones.length} zonas disponibles en ${region.nombre}.`
           : "Elige una región para consultar sus zonas.";
         showFieldError(form, "atet-region", "");
         showFieldError(form, "atet-zone", "");
+        updateDenomination();
       }
 
       function updateDenomination() {

@@ -43,79 +43,118 @@
         isDemoMacro: true,
         macroUserId: DEMO_MACRO_ID,
         assignment: null,
+        assignments: [],
         assignedQuota: null,
-        regionId: null
+        regionId: null,
+        regionIds: [],
+        quotaByRegion: {}
       };
     }
 
     const user = readList(adminUsersKey).find((item) => item.usuario === usuario);
     const macroUserId = user?.id || usuario;
-    const assignments = readList(assignmentsKey).filter((item) => item.macroId === macroUserId);
-    const assignment = assignments.find((item) => item.status === "Activo") || assignments[0] || null;
+    // Un Macro creado por el Administrador puede tener VARIAS regiones a su cargo.
+    // Solo cuentan las asignaciones activas; una liberada/desactivada no otorga
+    // cupo ni región.
+    const activeAssignments = readList(assignmentsKey)
+      .filter((item) => item.macroId === macroUserId && item.status === "Activo");
+    const quotaByRegion = {};
+    activeAssignments.forEach((item) => {
+      const quota = Math.max(0, Number(item.assigned) || 0);
+      quotaByRegion[item.regionId] = (quotaByRegion[item.regionId] || 0) + quota;
+    });
+    const regionIds = Object.keys(quotaByRegion);
+    const assignedQuota = Object.values(quotaByRegion).reduce((sum, value) => sum + value, 0);
 
     return {
       usuario,
       nombre,
       isDemoMacro: false,
       macroUserId,
-      assignment,
-      assignedQuota: assignment ? Math.max(0, Number(assignment.assigned) || 0) : 0,
-      regionId: assignment?.regionId || null
+      assignment: activeAssignments[0] || null,
+      assignments: activeAssignments,
+      assignedQuota,
+      regionId: regionIds[0] || null,
+      regionIds,
+      quotaByRegion
     };
   }
 
-  function monthEnd(periodId) {
-    const [year, month] = String(periodId).split("-").map(Number);
-    if (!year || !month) return periodId;
-    const day = new Date(year, month, 0).getDate();
-    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  function parseMonth(dateStr) {
+    const [year, month] = String(dateStr || "").split("-").map(Number);
+    return year && month ? year * 12 + (month - 1) : null;
   }
 
-  // Metadatos por periodo (número de entregable y fecha máxima). Si el periodo ya
-  // trae entregables se toman de ahí; si no, se deducen del orden y del mes.
-  function periodMeta(dashboardData) {
-    const meta = new Map();
-    (dashboardData.periodos || []).forEach((period, index) => {
-      const sample = (period.entregables || [])[0];
-      meta.set(period.id, {
-        numero: sample ? sample.numero : index + 1,
-        fechaMaxima: sample ? sample.fechaMaxima : monthEnd(period.id)
+  function monthIdFromIndex(index) {
+    const year = Math.floor(index / 12);
+    const month = (index % 12) + 1;
+    return `${year}-${String(month).padStart(2, "0")}`;
+  }
+
+  // "Fecha máxima" del entregable de un mes: el primer día del mes siguiente
+  // (cuando "se cumple el mes" de servicio). Ej.: servicio que trabaja
+  // septiembre → fecha máxima 2026-10-01.
+  function dueDateForMonthIndex(index) {
+    return `${monthIdFromIndex(index + 1)}-01`;
+  }
+
+  // Entregables mensuales de un ATET según su ventana de servicio
+  // (`fechaInicio`..`fechaTermino`). El entregable N.º 1 corresponde al primer
+  // mes de servicio, con su fecha máxima el 1.º del mes siguiente.
+  function serviceDeliverables(atet) {
+    const start = parseMonth(atet.fechaInicio);
+    if (!atet.codigo || start === null) return [];
+    const end = parseMonth(atet.fechaTermino);
+    const last = end !== null && end >= start ? end : start;
+    const list = [];
+    for (let index = start; index <= last && list.length < 60; index += 1) {
+      const periodoId = monthIdFromIndex(index);
+      list.push({
+        periodoId,
+        deliverable: {
+          id: `ent-${periodoId}-${atet.codigo}`,
+          atetCodigo: atet.codigo,
+          atetNombre: atet.nombreCompleto || atet.nombresApellidos || atet.codigo,
+          numero: index - start + 1,
+          fechaMaxima: dueDateForMonthIndex(index),
+          presentacion: { estado: "pendiente", fecha: null },
+          evaluacion: { estado: "pendiente", fecha: null, evaluador: null }
+        }
       });
-    });
-    return meta;
-  }
-
-  function syntheticDeliverable(periodId, atet, meta) {
-    return {
-      id: `ent-${periodId}-${atet.codigo}`,
-      atetCodigo: atet.codigo,
-      atetNombre: atet.nombreCompleto,
-      numero: meta.numero,
-      fechaMaxima: meta.fechaMaxima,
-      presentacion: { estado: "pendiente", fecha: null },
-      evaluacion: { estado: "pendiente", fecha: null, evaluador: null }
-    };
+    }
+    return list;
   }
 
   // Devuelve los periodos/entregables que corresponde ver al Macro.
-  // - El Macro demo conserva los entregables de `dashboard.json`.
-  // - Un Macro creado por el Administrador parte sin entregables precargados.
-  // - En ambos casos, si se pasa `personalData`, se generan entregables para
-  //   cada ATET propio que aún no tenga uno en el periodo (así el ATET recién
-  //   registrado aparece en el módulo de Entregables).
+  // - El Macro demo conserva los entregables precargados de `dashboard.json`.
+  // - Los entregables de cada ATET propio se generan mes a mes a partir de su
+  //   ventana de servicio: nunca hay entregables antes de la fecha de inicio ni
+  //   después de la fecha de término, y la numeración parte de 1 en el primer
+  //   mes de servicio (ver AV-030).
   function effectiveDashboard(dashboardData, context = get(), personalData) {
     const ownAtets = personalData ? effectivePersonal(personalData, context).atets : [];
-    const meta = personalData ? periodMeta(dashboardData) : null;
-    const periodos = (dashboardData.periodos || []).map((period, index) => {
-      const base = context.isDemoMacro ? (period.entregables || []) : [];
-      if (!ownAtets.length) return { ...period, entregables: base };
-      const covered = new Set(base.map((item) => item.atetCodigo));
-      const periodInfo = meta.get(period.id) || { numero: index + 1, fechaMaxima: monthEnd(period.id) };
-      const extra = ownAtets
-        .filter((atet) => atet.codigo && !covered.has(atet.codigo))
-        .map((atet) => syntheticDeliverable(period.id, atet, periodInfo));
-      return { ...period, entregables: [...base, ...extra] };
+    const registrationCodes = new Set(ownRegistrations(context).map((item) => item.codigo));
+    const periodMap = new Map();
+    (dashboardData.periodos || []).forEach((period) => {
+      periodMap.set(period.id, {
+        ...period,
+        entregables: context.isDemoMacro ? [...(period.entregables || [])] : []
+      });
     });
+    ownAtets.forEach((atet) => {
+      // El Macro demo conserva intactos los entregables precargados de sus ATET
+      // semilla; solo se generan entregables mes a mes para los ATET que el
+      // Macro registró o importó.
+      if (context.isDemoMacro && !registrationCodes.has(atet.codigo)) return;
+      serviceDeliverables(atet).forEach(({ periodoId, deliverable }) => {
+        if (!periodMap.has(periodoId)) periodMap.set(periodoId, { id: periodoId, entregables: [] });
+        const bucket = periodMap.get(periodoId);
+        if (!bucket.entregables.some((item) => item.atetCodigo === deliverable.atetCodigo)) {
+          bucket.entregables.push(deliverable);
+        }
+      });
+    });
+    const periodos = [...periodMap.values()].sort((a, b) => String(a.id).localeCompare(String(b.id)));
     return { ...dashboardData, periodos };
   }
 
