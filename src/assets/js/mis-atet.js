@@ -30,10 +30,16 @@
   }
 
   function mergeLocalRegistrations(data) {
-    return {
-      ...data,
-      atets: data.atets.concat(global.DEMO_STORE.getRegistrations())
-    };
+    const context = global.MACRO_CONTEXT ? global.MACRO_CONTEXT.get() : { isDemoMacro: true };
+    const ownRegistrations = global.MACRO_CONTEXT
+      ? global.MACRO_CONTEXT.ownRegistrations(context)
+      : global.DEMO_STORE.getRegistrations();
+    // El Macro demo mantiene su padrón precargado; un Macro creado por el
+    // Administrador solo ve los ATET que él mismo registró o importó.
+    const atets = context.isDemoMacro
+      ? data.atets.concat(ownRegistrations)
+      : ownRegistrations;
+    return { ...data, atets };
   }
 
   function createAtetStatus(status) {

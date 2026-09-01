@@ -11,6 +11,10 @@
         fetch("../data/catalogos.json").then((response) => {
           if (!response.ok) throw new Error("No se pudieron cargar los periodos.");
           return response.json();
+        }),
+        fetch("../data/personal.json").then((response) => {
+          if (!response.ok) throw new Error("No se pudieron cargar los ATET.");
+          return response.json();
         })
       ]).catch((error) => {
         dataPromise = null;
@@ -36,10 +40,10 @@
     return article;
   }
 
-  function renderMetrics(container, result) {
+  function renderMetrics(container, result, context = { isDemoMacro: true }) {
     container.replaceChildren();
 
-    if (result.esperados === 0) {
+    if (result.esperados === 0 && context.isDemoMacro) {
       const empty = document.createElement("p");
       empty.className = "dashboard-state";
       empty.textContent = "No existen entregables programados para este periodo.";
@@ -57,6 +61,13 @@
       createMetricCard("Pendientes de presentación", result.pendientesPresentacion, "neutral")
     );
     container.append(grid);
+
+    if (result.esperados === 0) {
+      const note = document.createElement("p");
+      note.className = "dashboard-state";
+      note.textContent = "Aún no hay entregables programados en este periodo. Registra tus ATET para iniciar el seguimiento.";
+      container.append(note);
+    }
   }
 
   function formatDate(value) {
@@ -353,15 +364,30 @@
     container.innerHTML = '<p class="dashboard-state" role="status">Cargando indicadores del periodo…</p>';
 
     try {
-      const [dashboardData, catalogs] = await loadData();
+      const [dashboardData, catalogs, personalData] = await loadData();
       if (!isCurrent()) return;
+      const context = global.MACRO_CONTEXT
+        ? global.MACRO_CONTEXT.get()
+        : { isDemoMacro: true, assignedQuota: null };
+      // Entregables del Macro (los de la demo si es `macro.demo`, más uno por cada
+      // ATET propio que aún no tenga entregable en el periodo) y solo sus
+      // presentaciones/evaluaciones.
+      const scopedDashboard = global.MACRO_CONTEXT
+        ? global.MACRO_CONTEXT.effectiveDashboard(dashboardData, context, personalData)
+        : dashboardData;
+      const ownPresentations = global.MACRO_CONTEXT
+        ? global.MACRO_CONTEXT.ownPresentations(context)
+        : global.DEMO_STORE.getPresentations();
+      const ownEvaluations = global.MACRO_CONTEXT
+        ? global.MACRO_CONTEXT.ownEvaluations(context)
+        : global.DEMO_STORE.getEvaluations();
       const dashboardWithPresentations = global.DELIVERABLE_CALCULATIONS.applyPresentationOverrides(
-        dashboardData,
-        global.DEMO_STORE.getPresentations()
+        scopedDashboard,
+        ownPresentations
       );
       const effectiveDashboardData = global.DELIVERABLE_CALCULATIONS.applyEvaluationOverrides(
         dashboardWithPresentations,
-        global.DEMO_STORE.getEvaluations()
+        ownEvaluations
       );
       const periodMap = new Map(catalogs.periodos.map((period) => [period.id, period]));
       const availablePeriods = effectiveDashboardData.periodos.filter((period) => periodMap.has(period.id));
@@ -409,7 +435,10 @@
       function updatePeriod() {
         const period = availablePeriods.find((item) => item.id === select.value);
         const result = global.DASHBOARD_CALCULATIONS.calculatePeriod(period);
-        renderMetrics(metrics, result);
+        if (!context.isDemoMacro && context.assignedQuota != null) {
+          result.atetACargo = context.assignedQuota;
+        }
+        renderMetrics(metrics, result, context);
         renderProgress(progress, result, periodMap.get(period.id));
         renderTracking(tracking, result, effectiveDashboardData.metadata.fechaReferencia);
         renderSummary(summary, result);

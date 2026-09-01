@@ -135,6 +135,13 @@ input {
   font-size: 0.9rem;
 }
 
+.login-intro {
+  margin: -1rem 0 1.75rem;
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
 .login-button {
   width: 100%;
   min-height: 66px;

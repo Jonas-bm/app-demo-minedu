@@ -20,6 +20,22 @@
     return dataPromise;
   }
 
+  // Limita los entregables y el padrón al Macro con sesión iniciada:
+  // `macro.demo` conserva la demo; un Macro creado por el Administrador
+  // solo ve sus propios ATET (y aún no tiene entregables precargados).
+  function scopeToMacro(dashboard, personal) {
+    const presentations = global.DEMO_STORE.getPresentations();
+    const evaluations = global.DEMO_STORE.getEvaluations();
+    if (!global.MACRO_CONTEXT) return { dashboard, personal, presentations, evaluations };
+    const context = global.MACRO_CONTEXT.get();
+    return {
+      dashboard: global.MACRO_CONTEXT.effectiveDashboard(dashboard, context, personal),
+      personal: global.MACRO_CONTEXT.effectivePersonal(personal, context),
+      presentations: global.MACRO_CONTEXT.ownPresentations(context),
+      evaluations: global.MACRO_CONTEXT.ownEvaluations(context)
+    };
+  }
+
   function formatPeriod(periodId) {
     const [year, month] = periodId.split("-").map(Number);
     const label = new Intl.DateTimeFormat("es-PE", { month: "long", year: "numeric" }).format(new Date(year, month - 1, 1));
@@ -221,7 +237,8 @@
     try {
       const [dashboard, personal] = await loadData();
       if (!isCurrent()) return;
-      const deliverables = global.DELIVERABLE_CALCULATIONS.buildExpectedDeliverables(dashboard, personal, global.DEMO_STORE.getPresentations(), global.DEMO_STORE.getEvaluations());
+      const scoped = scopeToMacro(dashboard, personal);
+      const deliverables = global.DELIVERABLE_CALCULATIONS.buildExpectedDeliverables(scoped.dashboard, scoped.personal, scoped.presentations, scoped.evaluations);
       container.replaceChildren();
       renderList(container, deliverables, dashboard.periodoPredeterminado);
       const flashMessage = global.DEMO_STORE.takeFlash();
@@ -244,8 +261,9 @@
     try {
       const [dashboard, personal] = await loadData();
       if (!isCurrent()) return;
+      const scoped = scopeToMacro(dashboard, personal);
       const deliverable = global.DELIVERABLE_CALCULATIONS
-        .buildExpectedDeliverables(dashboard, personal, global.DEMO_STORE.getPresentations(), global.DEMO_STORE.getEvaluations())
+        .buildExpectedDeliverables(scoped.dashboard, scoped.personal, scoped.presentations, scoped.evaluations)
         .find((item) => item.id === deliverableId);
       if (!deliverable) {
         container.innerHTML = '<div class="atet-state atet-state--error" role="alert"><strong>No encontramos el entregable solicitado.</strong><a class="atet-back-link" href="#entregables">← Atrás</a></div>';

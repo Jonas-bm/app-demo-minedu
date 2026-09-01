@@ -175,7 +175,7 @@
     const uniquePart = global.crypto?.randomUUID
       ? global.crypto.randomUUID()
       : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
-    return {
+    const registration = {
       id: `atet-local-${uniquePart}`,
       codigo: form.elements.namedItem("atet-code").value.trim(),
       nombreCompleto: `${form.elements.namedItem("atet-names").value.trim()} ${form.elements.namedItem("atet-surnames").value.trim()}`,
@@ -190,6 +190,9 @@
       fechaTermino: form.elements.namedItem("atet-end-date").value,
       estado: "activo"
     };
+    return global.MACRO_CONTEXT
+      ? global.MACRO_CONTEXT.stampOwnership(registration)
+      : registration;
   }
 
   async function setupLocationFields(form, status) {

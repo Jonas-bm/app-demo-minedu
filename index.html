@@ -48,6 +48,31 @@
             ¿Olvidaste tu contraseña?
           </button>
         </form>
+
+        <form id="password-change-form" novalidate hidden>
+          <p class="login-intro">
+            Es tu primer ingreso con una contraseña genérica. Define una
+            contraseña personal para continuar.
+          </p>
+
+          <div class="field">
+            <label for="nueva-contrasena">Nueva contraseña</label>
+            <input id="nueva-contrasena" name="nueva" type="password" autocomplete="new-password" placeholder="Nueva contraseña" required />
+          </div>
+
+          <div class="field">
+            <label for="confirmar-contrasena">Confirmar contraseña</label>
+            <input id="confirmar-contrasena" name="confirmar" type="password" autocomplete="new-password" placeholder="Repite la nueva contraseña" required />
+          </div>
+
+          <p id="password-change-message" class="form-message" role="alert" aria-live="polite"></p>
+
+          <button class="login-button" type="submit">Guardar y entrar</button>
+
+          <button class="forgot-button" id="password-change-cancel" type="button">
+            Volver al inicio de sesión
+          </button>
+        </form>
       </section>
     </main>
 

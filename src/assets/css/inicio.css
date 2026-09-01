@@ -1231,7 +1231,7 @@ button, a { font: inherit; }
 .history-list__heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .history-list__heading h3 { margin: 0; color: var(--navy); font-size: 1.05rem; }
 .history-list__heading p { color: var(--navy); font-size: 0.85rem; font-weight: 700; }
-.history-filters { display: grid; grid-template-columns: minmax(220px, 2fr) minmax(180px, 1fr) auto; align-items: end; gap: 0.8rem; margin-top: 1.25rem; padding: 1rem; border: 1px solid var(--border); border-radius: 9px; background: #f8fafc; }
+.history-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; align-items: end; gap: 0.8rem; margin-top: 1.25rem; padding: 1rem; border: 1px solid var(--border); border-radius: 9px; background: #f8fafc; }
 .history-filters input { width: 100%; min-height: 42px; padding: 0.6rem 0.7rem; border: 1px solid #aeb6c2; border-radius: 7px; }
 .history-filters input:focus-visible { border-color: #2b6cb0; outline: 3px solid rgba(43, 108, 176, 0.2); }
 .history-list__results { margin-top: 1.25rem; }
@@ -1618,7 +1618,7 @@ button, a { font: inherit; }
 .admin-table tr:last-child td { border-bottom: 0; }
 .admin-grid .admin-table { min-width: 100%; }
 .admin-badge { display: inline-block; padding: 0.25rem 0.45rem; border-radius: 999px; background: #e8eef7; color: var(--navy); font-size: 0.72rem; font-weight: 800; white-space: nowrap; }
-.admin-badge--ok { background: #e8f5ee; color: #17633f; }.admin-badge--off { background: #fbe9e7; color: #8d1f1f; }
+.admin-badge--ok { background: #e8f5ee; color: #17633f; }.admin-badge--off { background: #fbe9e7; color: #8d1f1f; }.admin-badge--warn { background: #fef3e0; color: #8a5300; }
 .admin-row-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; }
 .admin-row-actions button { min-height: 34px; padding: 0.35rem 0.55rem; border: 1px solid #9eabc0; border-radius: 6px; background: #fff; color: var(--navy); cursor: pointer; }
 .admin-table .admin-row-actions button { display: inline-flex; flex: 0 0 92px; width: 92px; align-items: center; justify-content: center; }

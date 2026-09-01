@@ -214,7 +214,7 @@
     }
 
     function createRegistrationFromRow(row, batchId) {
-      return {
+      const registration = {
         id: `atet-import-${batchId}-${row.rowNumber}`,
         codigo: row.data.codigo.trim(),
         nombreCompleto: row.data.nombresApellidos.trim(),
@@ -231,6 +231,9 @@
         estadoImportacion: row.status,
         observacionesImportacion: row.warnings.map((issue) => `${issue.column}: ${issue.message}`)
       };
+      return global.MACRO_CONTEXT
+        ? global.MACRO_CONTEXT.stampOwnership(registration)
+        : registration;
     }
 
     function downloadIncidentReport(rows) {

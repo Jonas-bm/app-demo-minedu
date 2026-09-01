@@ -1,34 +1,105 @@
 (function configureHistoryModule(global) {
-  let historyPromise;
+  let dataPromise;
 
-  function loadHistory() {
-    if (!historyPromise) {
-      historyPromise = fetch("../data/historial.json")
-        .then((response) => {
+  const MONTHS = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  ];
+
+  function loadData() {
+    if (!dataPromise) {
+      dataPromise = Promise.all([
+        fetch("../data/dashboard.json").then((response) => {
           if (!response.ok) throw new Error("No se pudo cargar el historial.");
           return response.json();
+        }),
+        fetch("../data/personal.json").then((response) => {
+          if (!response.ok) throw new Error("No se pudieron cargar los contratos ATET.");
+          return response.json();
         })
-        .catch((error) => {
-          historyPromise = null;
-          throw error;
-        });
+      ]).catch((error) => {
+        dataPromise = null;
+        throw error;
+      });
     }
-    return historyPromise;
+    return dataPromise;
   }
 
-  function normalize(value) {
-    return String(value || "").toLocaleLowerCase("es").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  // Acota los datos al Macro con sesión iniciada: cada Macro ve únicamente sus
+  // propios entregables, presentaciones y evaluaciones, nunca los de otro Macro.
+  function scopeToMacro(dashboard, personal) {
+    if (!global.MACRO_CONTEXT) {
+      return {
+        dashboard,
+        personal,
+        presentations: global.DEMO_STORE.getPresentations(),
+        evaluations: global.DEMO_STORE.getEvaluations()
+      };
+    }
+    const context = global.MACRO_CONTEXT.get();
+    return {
+      dashboard: global.MACRO_CONTEXT.effectiveDashboard(dashboard, context, personal),
+      personal: global.MACRO_CONTEXT.effectivePersonal(personal, context),
+      presentations: global.MACRO_CONTEXT.ownPresentations(context),
+      evaluations: global.MACRO_CONTEXT.ownEvaluations(context)
+    };
   }
 
-  function formatDateTime(value) {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "Fecha no disponible";
-    return new Intl.DateTimeFormat("es-PE", {
-      day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"
-    }).format(date);
+  function periodParts(periodId) {
+    const [year, month] = String(periodId).split("-").map(Number);
+    return { year: year || 0, month: month || 0 };
   }
 
-  function createTable(records) {
+  function formatShortDate(value) {
+    if (!value) return "—";
+    const [year, month, day] = value.split("-").map(Number);
+    if (!year || !month || !day) return value;
+    return `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
+  }
+
+  function resultKey(deliverable) {
+    const estado = deliverable.evaluacion?.estado;
+    if (estado === "conforme") return "conforme";
+    if (estado === "observada") return "observada";
+    return "pendiente";
+  }
+
+  function resultLabel(key) {
+    if (key === "conforme") return "Conforme";
+    if (key === "observada") return "Observado";
+    return "Pendiente";
+  }
+
+  // Una fila por entregable que el Macro ha registrado (presentado).
+  function buildRows(deliverables) {
+    return deliverables
+      .filter((deliverable) => deliverable.presentacion && deliverable.presentacion.fecha)
+      .map((deliverable) => {
+        const { year, month } = periodParts(deliverable.periodoId);
+        return {
+          id: deliverable.id,
+          anio: year,
+          mes: month,
+          periodoLabel: month ? `${MONTHS[month - 1]} ${year}` : deliverable.periodoId,
+          atet: deliverable.atet.nombreCompleto,
+          numero: deliverable.numero,
+          presentacion: deliverable.presentacion.fecha,
+          resultado: resultKey(deliverable)
+        };
+      })
+      .sort((first, second) => second.presentacion.localeCompare(first.presentacion));
+  }
+
+  function createResultBadge(key) {
+    const badge = document.createElement("span");
+    badge.className = `status-badge status-badge--${key === "observada" ? "observada" : key}`;
+    const text = document.createElement("span");
+    text.textContent = resultLabel(key);
+    badge.append(text);
+    return badge;
+  }
+
+  function createTable(rows) {
     const wrapper = document.createElement("div");
     const table = document.createElement("table");
     const caption = document.createElement("caption");
@@ -38,23 +109,36 @@
     wrapper.className = "history-table-wrapper";
     table.className = "history-table";
     caption.className = "sr-only";
-    caption.textContent = "Historial de acciones sobre presentaciones";
-    ["Fecha y hora", "Acción", "Usuario", "Entregable", "Detalle"].forEach((text) => {
+    caption.textContent = "Historial de presentaciones y evaluaciones registradas por el Macro";
+    ["Período", "ATET", "Entregable", "Presentación", "Resultado", "Informe"].forEach((text) => {
       const header = document.createElement("th");
       header.scope = "col";
       header.textContent = text;
       headRow.append(header);
     });
-    records.forEach((record) => {
-      const row = document.createElement("tr");
-      const values = [formatDateTime(record.fecha), record.accion === "actualizacion" ? "Actualización" : "Creación", record.usuario, record.entidadId, record.detalle];
-      values.forEach((value, index) => {
+    rows.forEach((row) => {
+      const tableRow = document.createElement("tr");
+      [row.periodoLabel, row.atet, `${row.numero}.º`, formatShortDate(row.presentacion)].forEach((value) => {
         const cell = document.createElement("td");
         cell.textContent = value;
-        if (index === 1) cell.className = `history-action history-action--${record.accion}`;
-        row.append(cell);
+        tableRow.append(cell);
       });
-      body.append(row);
+      const resultCell = document.createElement("td");
+      resultCell.append(createResultBadge(row.resultado));
+      tableRow.append(resultCell);
+      const reportCell = document.createElement("td");
+      if (row.resultado === "pendiente") {
+        reportCell.textContent = "—";
+      } else {
+        const link = document.createElement("a");
+        link.className = "atet-detail-link";
+        link.href = `#evaluar-entregable/${encodeURIComponent(row.id)}`;
+        link.textContent = "Ver";
+        link.setAttribute("aria-label", `Ver el resultado del entregable ${row.numero} de ${row.atet}`);
+        reportCell.append(link);
+      }
+      tableRow.append(reportCell);
+      body.append(tableRow);
     });
     head.append(headRow);
     table.append(caption, head, body);
@@ -62,53 +146,72 @@
     return wrapper;
   }
 
-  function renderHistory(container, records) {
+  function createFilterField(id, labelText) {
+    const field = document.createElement("div");
+    const label = document.createElement("label");
+    const select = document.createElement("select");
+    field.className = "deliverable-filter";
+    label.htmlFor = id;
+    label.textContent = labelText;
+    select.id = id;
+    field.append(label, select);
+    return { field, select };
+  }
+
+  function fillOptions(select, options) {
+    options.forEach(([value, text]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = text;
+      select.append(option);
+    });
+  }
+
+  function renderHistory(container, rows) {
     const section = document.createElement("section");
     const heading = document.createElement("div");
     const title = document.createElement("h3");
     const counter = document.createElement("p");
     const controls = document.createElement("div");
-    const searchField = document.createElement("div");
-    const searchLabel = document.createElement("label");
-    const search = document.createElement("input");
-    const actionField = document.createElement("div");
-    const actionLabel = document.createElement("label");
-    const action = document.createElement("select");
+    const yearFilter = createFilterField("history-year", "Año");
+    const monthFilter = createFilterField("history-month", "Mes");
+    const atetFilter = createFilterField("history-atet", "ATET");
+    const resultFilter = createFilterField("history-result-filter", "Resultado");
     const clear = document.createElement("button");
     const results = document.createElement("div");
     const pageSize = 5;
     let currentPage = 1;
+
     section.className = "history-list";
     heading.className = "history-list__heading";
-    title.textContent = "Acciones registradas";
+    title.textContent = "Presentaciones y evaluaciones registradas";
     counter.setAttribute("aria-live", "polite");
     controls.className = "history-filters";
-    searchField.className = "deliverable-filter";
-    searchLabel.htmlFor = "history-search";
-    searchLabel.textContent = "Buscar";
-    search.id = "history-search";
-    search.type = "search";
-    search.placeholder = "Entregable, usuario o detalle";
-    actionField.className = "deliverable-filter";
-    actionLabel.htmlFor = "history-action-filter";
-    actionLabel.textContent = "Acción";
-    action.id = "history-action-filter";
-    [["", "Todas las acciones"], ["creacion", "Creación"], ["actualizacion", "Actualización"]].forEach(([value, text]) => {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = text;
-      action.append(option);
-    });
     clear.className = "atet-filters__clear";
     clear.type = "button";
     clear.textContent = "Limpiar filtros";
     results.className = "history-list__results";
 
+    const years = [...new Set(rows.map((row) => row.anio).filter(Boolean))].sort((a, b) => b - a);
+    const months = [...new Set(rows.map((row) => row.mes).filter(Boolean))].sort((a, b) => a - b);
+    const atets = [...new Set(rows.map((row) => row.atet))].sort((a, b) => a.localeCompare(b, "es"));
+
+    fillOptions(yearFilter.select, [["", "Todos los años"], ...years.map((year) => [String(year), String(year)])]);
+    fillOptions(monthFilter.select, [["", "Todos los meses"], ...months.map((month) => [String(month), MONTHS[month - 1]])]);
+    fillOptions(atetFilter.select, [["", "Todos los ATET"], ...atets.map((atet) => [atet, atet])]);
+    fillOptions(resultFilter.select, [
+      ["", "Todos los resultados"],
+      ["conforme", "Conforme"],
+      ["observada", "Observado"],
+      ["pendiente", "Pendiente"]
+    ]);
+
     function update(resetPage = false) {
-      const query = normalize(search.value);
-      const filtered = records.filter((record) =>
-        (!action.value || record.accion === action.value)
-        && normalize([record.entidadId, record.usuario, record.detalle].join(" ")).includes(query)
+      const filtered = rows.filter((row) =>
+        (!yearFilter.select.value || String(row.anio) === yearFilter.select.value)
+        && (!monthFilter.select.value || String(row.mes) === monthFilter.select.value)
+        && (!atetFilter.select.value || row.atet === atetFilter.select.value)
+        && (!resultFilter.select.value || row.resultado === resultFilter.select.value)
       );
       if (resetPage) currentPage = 1;
       const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -118,7 +221,9 @@
       if (!filtered.length) {
         const empty = document.createElement("p");
         empty.className = "atet-list__empty";
-        empty.textContent = "No existen acciones que coincidan con los filtros.";
+        empty.textContent = rows.length
+          ? "No hay registros que coincidan con los filtros."
+          : "Aún no has registrado presentaciones ni evaluaciones.";
         results.append(empty);
         return;
       }
@@ -142,13 +247,19 @@
       results.append(createTable(filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)), pagination);
     }
 
-    search.addEventListener("input", () => update(true));
-    action.addEventListener("change", () => update(true));
-    clear.addEventListener("click", () => { search.value = ""; action.value = ""; update(true); search.focus(); });
-    searchField.append(searchLabel, search);
-    actionField.append(actionLabel, action);
+    [yearFilter.select, monthFilter.select, atetFilter.select, resultFilter.select].forEach((select) => {
+      select.addEventListener("change", () => update(true));
+    });
+    clear.addEventListener("click", () => {
+      [yearFilter.select, monthFilter.select, atetFilter.select, resultFilter.select].forEach((select) => {
+        select.value = "";
+      });
+      update(true);
+      yearFilter.select.focus();
+    });
+
     heading.append(title, counter);
-    controls.append(searchField, actionField, clear);
+    controls.append(yearFilter.field, monthFilter.field, atetFilter.field, resultFilter.field, clear);
     section.append(heading, controls, results);
     container.append(section);
     update();
@@ -157,12 +268,17 @@
   async function render(container, isCurrent = () => true) {
     container.innerHTML = '<p class="atet-state" role="status">Cargando historial…</p>';
     try {
-      const base = await loadHistory();
+      const [dashboard, personal] = await loadData();
       if (!isCurrent()) return;
-      const records = base.registros.concat(global.DEMO_STORE.getAudit())
-        .sort((first, second) => second.fecha.localeCompare(first.fecha));
+      const scoped = scopeToMacro(dashboard, personal);
+      const deliverables = global.DELIVERABLE_CALCULATIONS.buildExpectedDeliverables(
+        scoped.dashboard,
+        scoped.personal,
+        scoped.presentations,
+        scoped.evaluations
+      );
       container.replaceChildren();
-      renderHistory(container, records);
+      renderHistory(container, buildRows(deliverables));
     } catch (error) {
       if (!isCurrent()) return;
       console.error("No se pudo cargar el historial.", error);
