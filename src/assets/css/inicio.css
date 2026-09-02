@@ -1645,6 +1645,8 @@ button, a { font: inherit; }
 .admin-user-modal__close:hover { background: #f3f6f9; }
 .admin-user-modal__body { padding: 1.25rem 1.5rem; overflow-y: auto; }
 .admin-user-modal__body .registration-form__note { margin: 0 0 1.25rem; }
+.admin-assignment-chips { list-style: none; margin: 0.5rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.admin-assignment-chips li { background: var(--surface, #fff); border: 1px solid var(--border); border-radius: 999px; padding: 0.15rem 0.7rem; font-size: 0.85rem; }
 .admin-user-form__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 1.25rem; }
 .admin-user-modal__footer { display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.5rem; border-top: 1px solid var(--border); background: #f8fafc; }
 .admin-user-form__status { min-height: 1.2rem; margin: 0 auto 0 0; color: #8d1f1f; font-size: 0.8rem; font-weight: 700; }

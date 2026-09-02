@@ -32,12 +32,17 @@ Demo logins (all password `demo2026`), from `src/config/credenciales.demo.js`:
 
 ### Roles
 
-Four canonical roles in `src/config/roles.js` (`APP_ROLES`): `Macro`, `Gestor de la Información`, `Jefe`, `Administrador`. `normalizeDemoRole` maps aliases/accents to the canonical string. Feature modules are prefixed by audience: `jefe-*` (executive read-only dashboards), `gestor-*` (report workflow), unprefixed Macro modules (`dashboard.js`, `mis-atet.js`, `registrar-atet.js`, `entregables.js`, `historial.js`), and `admin.js` (one module rendering all `*-admin` views).
+Four canonical roles in `src/config/roles.js` (`APP_ROLES`): `Macro`, `Gestor de la Información`, `Jefe`, `Administrador`. `normalizeDemoRole` maps aliases/accents to the canonical string. Feature modules are prefixed by audience: `jefe-*` (executive read-only dashboards), `gestor-*` (report workflow), unprefixed Macro modules (`dashboard.js`, `mis-atet.js`, `registrar-atet.js`, `importar-atet.js`, `entregables.js`, `evaluacion.js`, `historial.js`), `admin.js` (one module rendering all `*-admin` views), and `perfil.js` (shared profile view, `PROFILE_MODULE`).
+
+### Pure-calculation / UI helper layer
+
+Some `*-calculos.js` / helper files carry no DOM rendering — they expose frozen namespaces consumed by the feature modules, so business logic can change in one place: `atet-calculos.js` (`ATET_CALCULATIONS`), `dashboard-calculos.js` (`DASHBOARD_CALCULATIONS`), `entregables-calculos.js` (`DELIVERABLE_CALCULATIONS` — deliverable state machine, presentation/evaluation overrides), `importacion-validacion.js` (`ATET_IMPORT_VALIDATION` — workbook parse/validate for `importar-atet.js`). `informe-vista-previa.js` (`REPORT_PREVIEW_MODULE`) renders the printable report preview; `select-ui.js` (`SELECT_UI.enhanceWithin`) upgrades native `<select>`s. Each loads before its consumer in `inicio.html`.
 
 ### Data and persistence
 
-- `src/data/*.json` — `dashboard.json` (periods + deliverables), `personal.json` (seeded ATET records + assigned quota; keeps its legacy filename), `historial.json`, `catalogos.json` (regions, ámbitos, zonas, periods, states). Each module `fetch`es the JSON it needs with `../data/...` relative paths and memoizes the promise.
-- `src/config/*.js` — non-secret configuration exposed on `window`: `roles.js`, `modulos.js` (view titles/descriptions), `denominacion.js`, `importacion.js`, `evaluacion.js` (the 8 evaluation products, catalogue `segundo-entregable-2025-v1`), `informe.js` (report templates).
+- `src/data/*.json` — `dashboard.json` (periods + deliverables), `personal.json` (seeded ATET records + assigned quota; keeps its legacy filename), `historial.json`, `catalogos.json` (regions, ámbitos, periods, states). Each module `fetch`es the JSON it needs with `../data/...` relative paths and memoizes the promise.
+- **Zonas are not a catalog.** A region has exactly as many zonas as ATET the Administrator contracted there (Zona 1 … Zona N). `src/config/zonas.js` (`window.DEMO_ZONAS`) generates and resolves them from the id format `zona-<region without "reg-">-<NN>` (`forRegion(regionId, count)`, `resolve(zonaId)`, `id(regionId, numero)`, `DEFAULT_COUNT` when unscoped). Consumers: `registrar-atet.js`, `importacion-validacion.js`, `mis-atet.js`, `informe-vista-previa.js` (AV-032).
+- `src/config/*.js` — non-secret configuration exposed on `window`: `roles.js`, `modulos.js` (view titles/descriptions), `denominacion.js`, `zonas.js` (`DEMO_ZONAS`), `importacion.js` (column aliases + accepted `.xlsx`/`.xlsm`), `evaluacion.js` (the 8 evaluation products, catalogue `segundo-entregable-2025-v1`), `informe.js` (report templates).
 - `src/config/demo-store.js` — `window.DEMO_STORE`, the write layer. Wraps `localStorage` keys `demoAtetRegistrations`, `demoDeliverablePresentations`, `demoEvaluations`, `demoEvaluationDrafts`, `demoReports`, `demoAtetAudit`, plus a `sessionStorage` flash message. Every mutating call also appends an audit entry. Evaluation drafts/records are filtered by `catalogoVersion` so a config bump invalidates stale local data.
 - `credenciales.demo.js` (committed, public fake users) is what `index.html` actually loads. `credenciales.local.js` / `credenciales.example.js` are a legacy `.gitignore`d local-override mechanism; `.gitignore` also excludes `docs/` and `CONTEXTO_PROYECTO.md`.
 
@@ -50,7 +55,7 @@ Four canonical roles in `src/config/roles.js` (`APP_ROLES`): `Macro`, `Gestor de
 
 Any macro-side screen that reads `personal.json` / `dashboard.json` / `historial.json` MUST route through `MACRO_CONTEXT` (`effectivePersonal`, `effectiveDashboard`, `ownRegistrations`, `ownPresentations`, `ownEvaluations`, `isOwnAuthor`) instead of reading the JSON directly. Consumers today: `dashboard.js`, `mis-atet.js`, `historial.js`, `entregables.js`, `evaluacion.js` (render path only), `registrar-atet.js`, `importar-atet.js`, `admin.js`.
 
-Administrator group assignment enforces a strict **1:1 macro ↔ region** relationship (`admin.js` `openMacroAssignmentModal` / `duplicateMacro` + `duplicateRegion` checks). Any change to assignment creation/editing must preserve both uniqueness checks. See AV-023 / AV-025 in `docs/MAPA_DE_CAMBIOS.md`.
+Administrator group assignment (`admin.js` `openMacroAssignmentModal`): a **region belongs to exactly one Macro** (`duplicateRegion` check on active assignments), but a **Macro may hold several regions, all of the same ámbito** — picking the first region locks the Macro's ámbito and later region options are filtered to it. `normalizeMacroAssignments` is idempotent and drops rows that repeat an already-assigned region (logging them to the audit trail). Any change to assignment creation/editing must preserve the one-region-one-Macro and same-ámbito rules. See AV-023 / AV-028 / AV-031 in `docs/MAPA_DE_CAMBIOS.md`.
 
 ### First-login password change
 

@@ -1,17 +1,24 @@
 (function configureAtetImport(global) {
+  // `essential`: sin esta columna no se puede ubicar la fila y la validación se
+  // detiene con un mensaje claro. El resto son opcionales: si faltan, la fila se
+  // importa igual con un valor por defecto (la importación es demostrativa y no
+  // bloquea filas — ver AV-029 / AV-032).
+  // `aliases`: encabezados equivalentes aceptados (además del `header`), sin
+  // distinguir mayúsculas, tildes ni espacios. Así se admite tanto la plantilla
+  // demo como el consolidado real de la DITE.
   const columns = [
-    { key: "codigo", header: "Código ATET", required: true, input: true, format: "Texto no vacío" },
-    { key: "nombresApellidos", header: "Nombres y apellidos", required: true, input: true, format: "Texto no vacío" },
-    { key: "dni", header: "DNI", required: true, input: true, format: "8 dígitos" },
-    { key: "sinad", header: "SINAD", required: true, input: true, format: "Texto no vacío" },
-    { key: "celular", header: "Celular", required: true, input: true, format: "9 dígitos; empieza en 9" },
-    { key: "correo", header: "Correo", required: true, input: true, format: "Correo electrónico válido" },
-    { key: "ordenServicio", header: "Orden de Servicio", required: true, input: true, format: "Texto no vacío" },
-    { key: "region", header: "Región", required: true, input: true, format: "Nombre exacto del catálogo demo" },
-    { key: "ambito", header: "Ámbito", required: true, input: false, format: "Calculado desde Región" },
-    { key: "zona", header: "Zona", required: true, input: true, format: "Nombre exacto de una zona de la región" },
-    { key: "fechaInicio", header: "Fecha de inicio", required: true, input: true, format: "Fecha Excel o AAAA-MM-DD" },
-    { key: "fechaTermino", header: "Fecha de término", required: true, input: true, format: "Fecha Excel o AAAA-MM-DD" }
+    { key: "codigo", header: "Código ATET", essential: false, input: true, format: "Texto (si falta, se genera)", aliases: ["codigo", "cod atet", "n", "nº", "n°", "no", "item"] },
+    { key: "nombresApellidos", header: "Nombres y apellidos", essential: true, input: true, format: "Texto no vacío", aliases: ["nombres y apellidos", "apellidos y nombres", "nombre completo", "nombres", "nombres del atet"] },
+    { key: "dni", header: "DNI", essential: true, input: true, format: "Documento de identidad", aliases: ["documento", "dni del atet", "nro dni"] },
+    { key: "sinad", header: "SINAD", essential: false, input: true, format: "Texto", aliases: ["codigo sinad", "n sinad", "nro sinad", "expediente sinad"] },
+    { key: "celular", header: "Celular", essential: false, input: true, format: "Número de contacto", aliases: ["telefono", "nro celular", "numero de celular", "celular del atet", "telefono celular"] },
+    { key: "correo", header: "Correo", essential: false, input: true, format: "Correo electrónico", aliases: ["correo electronico", "email", "e-mail", "correo del atet"] },
+    { key: "ordenServicio", header: "Orden de Servicio", essential: false, input: true, format: "Texto (si falta, se genera)", aliases: ["orden de servicio", "o/s", "os", "nro de o/s", "numero de ods", "n ods", "ods", "numero de orden de servicio"] },
+    { key: "region", header: "Región", essential: true, input: true, format: "Nombre de la región", aliases: ["region", "region del servicio", "departamento"] },
+    { key: "ambito", header: "Ámbito", essential: false, input: false, format: "Calculado desde Región", aliases: ["ambito"] },
+    { key: "zona", header: "Zona", essential: true, input: true, format: "Número o nombre de zona", aliases: ["zona", "numero", "nro zona", "n zona", "numero de zona", "zona del servicio"] },
+    { key: "fechaInicio", header: "Fecha de inicio", essential: true, input: true, format: "Fecha Excel o AAAA-MM-DD", aliases: ["fecha inicio", "fecha de inicio del servicio", "inicio del servicio", "fecha de inicio de servicio"] },
+    { key: "fechaTermino", header: "Fecha de término", essential: true, input: true, format: "Fecha Excel o AAAA-MM-DD", aliases: ["fecha termino", "fecha de termino", "fecha fin", "fecha de fin", "fecha fin del servicio", "fecha de fin del servicio", "fecha fin de servicio", "termino del servicio", "fecha de culminacion"] }
   ];
 
   const blockingRules = [
@@ -36,10 +43,14 @@
   ];
 
   global.ATET_IMPORT_CONFIG = Object.freeze({
-    version: "demo-1.0",
+    version: "demo-1.1",
     status: "provisional",
     sheetName: "ATET",
-    acceptedExtensions: Object.freeze([".xlsx"]),
+    // Hojas preferidas al leer un libro con varias pestañas (la plantilla demo
+    // trae "ATET"; el consolidado real, "CONSOLIDADO ATET"). Si no aparece
+    // ninguna, se usa la primera hoja del libro.
+    preferredSheets: Object.freeze(["atet", "consolidado atet", "consolidado", "hoja1"]),
+    acceptedExtensions: Object.freeze([".xlsx", ".xlsm"]),
     maximumBytes: 5 * 1024 * 1024,
     columns: Object.freeze(columns.map(Object.freeze)),
     blockingRules: Object.freeze(blockingRules.map(Object.freeze)),

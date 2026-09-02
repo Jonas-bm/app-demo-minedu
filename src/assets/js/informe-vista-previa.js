@@ -254,7 +254,7 @@
       const regionRecord = catalogs.regiones.find((item) => item.id === atet.regionId);
       const region = regionRecord?.nombre || "Dato no disponible";
       const scope = catalogs.ambitos.find((item) => item.id === regionRecord?.ambitoId)?.nombre;
-      const zoneNumber = catalogs.zonas.find((item) => item.id === atet.zonaId)?.numero;
+      const zoneNumber = global.DEMO_ZONAS.resolve(atet.zonaId)?.numero;
       const serviceName = (atet.denominacionServicio
         || (global.SERVICE_DENOMINATION?.generate({ region, scope, zoneNumber }) || "")
         || `SERVICIO DE ASISTENCIA TECNOLÓGICA PARA LA ACTUALIZACIÓN DE LOS MATERIALES EDUCATIVOS DIGITALES DE LAS INSTITUCIONES EDUCATIVAS BENEFICIADAS CON TABLETAS, EN EL MARCO DEL PLAN DE CIERRE DE BRECHA DIGITAL EN LA REGIÓN ${String(region).toUpperCase()} — DEMO`).replace(/\.\s*$/, "");

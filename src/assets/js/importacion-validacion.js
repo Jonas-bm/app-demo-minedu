@@ -90,19 +90,73 @@
     return { headers: rows[0], rows: rows.slice(1).filter((row) => row.some(Boolean)) };
   }
 
+  function resolveWorksheetPart(target) {
+    if (!target) return "";
+    let path = String(target).replace(/^\//, "");
+    if (path.startsWith("xl/")) return path;
+    if (path.startsWith("../")) return path.replace(/^\.\.\//, "");
+    return `xl/${path}`;
+  }
+
   async function parseWorkbook(file) {
     const entries = await readZipEntries(await file.arrayBuffer());
-    const sheetXml = entries.get("xl/worksheets/sheet1.xml");
-    if (!sheetXml) throw new Error("No encontramos la primera hoja de la plantilla.");
+    const workbookXml = entries.get("xl/workbook.xml") || "";
+    const relsXml = entries.get("xl/_rels/workbook.xml.rels") || "";
+    const relTargets = new Map(
+      [...relsXml.matchAll(/<Relationship\b[^>]*>/g)].map((match) => [
+        (match[0].match(/\bId="([^"]*)"/) || [null, ""])[1],
+        (match[0].match(/\bTarget="([^"]*)"/) || [null, ""])[1]
+      ])
+    );
+    const candidates = [...workbookXml.matchAll(/<sheet\b[^>]*>/g)]
+      .map((match) => {
+        const rid = (match[0].match(/r:id="([^"]*)"/) || match[0].match(/\bid="([^"]*)"/i) || [null, ""])[1];
+        return {
+          name: decodeXml((match[0].match(/\bname="([^"]*)"/) || [null, ""])[1]),
+          xml: entries.get(resolveWorksheetPart(relTargets.get(rid)))
+        };
+      })
+      .filter((item) => item.xml);
+
+    const preferred = global.ATET_IMPORT_CONFIG.preferredSheets || [];
+    let chosen = null;
+    for (const name of preferred) {
+      chosen = candidates.find((item) => normalize(item.name).replace(/\s+/g, " ") === name);
+      if (chosen) break;
+    }
+    if (!chosen) chosen = candidates[0];
+    if (!chosen && entries.get("xl/worksheets/sheet1.xml")) {
+      chosen = { name: "Hoja1", xml: entries.get("xl/worksheets/sheet1.xml") };
+    }
+    if (!chosen) throw new Error("No encontramos ninguna hoja con datos dentro del archivo.");
+
     const sharedXml = entries.get("xl/sharedStrings.xml") || "";
     const sharedStrings = [...sharedXml.matchAll(/<si(?:\s[^>]*)?>([\s\S]*?)<\/si>/g)].map((item) =>
       [...item[1].matchAll(/<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)].map((match) => decodeXml(match[1])).join("")
     );
-    return parseSheet(sheetXml, sharedStrings);
+    return { ...parseSheet(chosen.xml, sharedStrings), sheetName: chosen.name };
   }
 
   function normalize(value) {
     return String(value || "").trim().toLocaleLowerCase("es").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
+  // Encabezado normalizado para comparar: sin tildes, en min\u00fasculas, con los
+  // saltos de l\u00ednea y espacios m\u00faltiples colapsados y sin puntuaci\u00f3n final.
+  function normalizeHeader(value) {
+    return normalize(value).replace(/\s+/g, " ").replace(/[.:;\u00b7]+$/g, "").trim();
+  }
+
+  // Empareja cada columna esperada con la posici\u00f3n real en la hoja usando su
+  // encabezado o cualquiera de sus alias. Devuelve { clave: \u00edndice | -1 }.
+  function buildHeaderMap(headers) {
+    const normalized = headers.map(normalizeHeader);
+    const map = {};
+    global.ATET_IMPORT_CONFIG.columns.forEach((column) => {
+      const accepted = [column.header, ...(column.aliases || [])].map(normalizeHeader);
+      map[column.key] = normalized.findIndex((header) => header && accepted.includes(header));
+    });
+    return map;
   }
 
   function parseDate(value) {
@@ -118,61 +172,78 @@
     return "";
   }
 
-  // Maqueta: la importación es una demostración y NO bloquea filas. Cada fila se
-  // acepta "Sin incidencias"; solo se resuelve la ubicación territorial contra el
-  // catálogo (o el valor más cercano) y se calculan ámbito y denominación. Ver
-  // AV-029 en docs/MAPA_DE_CAMBIOS.md.
+  // Maqueta: la importación es una demostración y NO bloquea filas. Los
+  // encabezados se emparejan por nombre/alias (no por orden), de modo que se
+  // admite tanto la plantilla demo como el consolidado real de la DITE. Cada
+  // fila se acepta "Sin incidencias"; solo se resuelve la ubicación territorial
+  // contra el catálogo (o el valor más cercano) y se calculan ámbito, zona y
+  // denominación. Ver AV-029 / AV-032 en docs/MAPA_DE_CAMBIOS.md.
   function validateWorkbook(workbook, existingAtets, catalogs) {
-    const expectedHeaders = global.ATET_IMPORT_CONFIG.columns.map((column) => column.header);
-    if (workbook.headers.length !== expectedHeaders.length || expectedHeaders.some((header, index) => workbook.headers[index] !== header)) {
-      throw new Error("Los encabezados o su orden no corresponden a la plantilla de demostración.");
-    }
-    if (!workbook.rows.length) throw new Error("El archivo no contiene registros para validar.");
+    if (!workbook.rows.length) throw new Error("El archivo no contiene registros para importar.");
 
-    const keys = global.ATET_IMPORT_CONFIG.columns.map((column) => column.key);
-    const rawRows = workbook.rows.map((values, index) => ({
-      rowNumber: index + 2,
-      data: Object.fromEntries(keys.map((key, cellIndex) => [key, values[cellIndex] || ""]))
-    }));
+    const headerMap = buildHeaderMap(workbook.headers);
+    const missing = global.ATET_IMPORT_CONFIG.columns
+      .filter((column) => column.essential && headerMap[column.key] === -1)
+      .map((column) => column.header);
+    if (missing.length) {
+      const hoja = workbook.sheetName ? ` de la hoja "${workbook.sheetName}"` : "";
+      throw new Error(`No pudimos identificar${hoja} las columnas obligatorias: ${missing.join(", ")}. Revisa los encabezados o descarga la plantilla demo.`);
+    }
+
+    const cell = (values, key) => {
+      const index = headerMap[key];
+      return index >= 0 ? String(values[index] ?? "").trim() : "";
+    };
 
     const regionsByName = new Map(catalogs.regiones.map((item) => [normalize(item.nombre), item]));
     const scopes = new Map(catalogs.ambitos.map((item) => [item.id, item]));
-    const zones = catalogs.zonas;
     const macroRegionId = global.MACRO_CONTEXT ? global.MACRO_CONTEXT.get().regionId : null;
     const fallbackRegion = catalogs.regiones.find((item) => item.id === macroRegionId) || catalogs.regiones[0];
 
-    return rawRows.map(({ rowNumber, data }) => {
-      const region = regionsByName.get(normalize(data.region)) || fallbackRegion;
-      const scope = scopes.get(region.ambitoId) || catalogs.ambitos[0];
-      const regionZones = zones.filter((item) => item.regionId === region.id);
-      const digits = String(data.zona).replace(/\D/g, "");
-      const zone = regionZones.find((item) => normalize(item.nombre) === normalize(data.zona))
-        || (digits && regionZones.find((item) => String(item.numero) === digits))
-        || regionZones[0]
-        || null;
+    return workbook.rows
+      // Se ignoran las filas que no representan a una persona (sin nombre ni DNI):
+      // en el consolidado real hay filas de zona todavía sin contratar.
+      .map((values, index) => ({ values, index }))
+      .filter(({ values }) => cell(values, "nombresApellidos") || cell(values, "dni"))
+      .map(({ values, index }) => {
+        const rawRegion = cell(values, "region");
+        const region = regionsByName.get(normalize(rawRegion))
+          || (rawRegion && catalogs.regiones.find((item) => normalize(item.nombre).startsWith(normalize(rawRegion))))
+          || fallbackRegion;
+        const scope = scopes.get(region.ambitoId) || catalogs.ambitos[0];
+        const zoneDigits = cell(values, "zona").replace(/\D/g, "");
+        const zoneNumber = Math.max(1, zoneDigits ? Number(zoneDigits) : index + 1);
+        const zone = global.DEMO_ZONAS.resolve(global.DEMO_ZONAS.id(region.id, zoneNumber));
+        const slug = region.id.replace(/^reg-/, "").toLocaleUpperCase("es");
 
-      const normalizedData = {
-        ...data,
-        region: region.nombre,
-        zona: zone ? zone.nombre : data.zona,
-        ambito: scope ? scope.nombre : "",
-        regionId: region.id,
-        zonaId: zone ? zone.id : "",
-        fechaInicio: parseDate(data.fechaInicio),
-        fechaTermino: parseDate(data.fechaTermino),
-        denominacion: region && scope && zone
-          ? global.SERVICE_DENOMINATION.generate({ region: region.nombre, scope: scope.nombre, zoneNumber: zone.numero })
-          : ""
-      };
+        const data = {
+          codigo: cell(values, "codigo") || `IMP-${slug}-${String(zoneNumber).padStart(2, "0")}`,
+          nombresApellidos: cell(values, "nombresApellidos"),
+          dni: cell(values, "dni"),
+          sinad: cell(values, "sinad") || "—",
+          celular: cell(values, "celular") || "—",
+          correo: cell(values, "correo") || "—",
+          ordenServicio: cell(values, "ordenServicio") || "—",
+          region: region.nombre,
+          zona: zone.nombre,
+          ambito: scope ? scope.nombre : "",
+          regionId: region.id,
+          zonaId: zone.id,
+          fechaInicio: parseDate(cell(values, "fechaInicio")),
+          fechaTermino: parseDate(cell(values, "fechaTermino")),
+          denominacion: scope
+            ? global.SERVICE_DENOMINATION.generate({ region: region.nombre, scope: scope.nombre, zoneNumber: zone.numero })
+            : ""
+        };
 
-      return {
-        rowNumber,
-        data: normalizedData,
-        errors: [],
-        warnings: [],
-        status: global.ATET_IMPORT_CONFIG.rowStatuses.valid
-      };
-    });
+        return {
+          rowNumber: index + 2,
+          data,
+          errors: [],
+          warnings: [],
+          status: global.ATET_IMPORT_CONFIG.rowStatuses.valid
+        };
+      });
   }
 
   global.ATET_IMPORT_VALIDATION = Object.freeze({ parseWorkbook, validateWorkbook, parseDate });

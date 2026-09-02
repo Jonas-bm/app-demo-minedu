@@ -164,7 +164,11 @@
     const clearButton = document.createElement("button");
     const results = document.createElement("div");
     const regionMap = new Map(catalogs.regiones.map((region) => [region.id, region]));
-    const assignedZoneIds = new Set(atets.map((atet) => atet.zonaId));
+    // Las zonas presentes se derivan de los ATET listados (ya no hay catálogo
+    // fijo de zonas): cada `zonaId` se resuelve a su región y número.
+    const assignedZones = [...new Set(atets.map((atet) => atet.zonaId))]
+      .map((zonaId) => global.DEMO_ZONAS.resolve(zonaId))
+      .filter(Boolean);
     const pageSize = 5;
     let currentPage = 1;
 
@@ -196,8 +200,7 @@
 
     function updateZoneOptions() {
       const previousValue = zoneFilter.select.value;
-      const matchingZones = catalogs.zonas.filter((zone) => {
-        if (!assignedZoneIds.has(zone.id)) return false;
+      const matchingZones = assignedZones.filter((zone) => {
         if (regionFilter.select.value && zone.regionId !== regionFilter.select.value) return false;
         const region = regionMap.get(zone.regionId);
         return !scopeFilter.select.value || region?.ambitoId === scopeFilter.select.value;
@@ -336,7 +339,7 @@
       }
 
       const region = catalogs.regiones.find((item) => item.id === atet.regionId);
-      const zone = catalogs.zonas.find((item) => item.id === atet.zonaId);
+      const zone = global.DEMO_ZONAS.resolve(atet.zonaId);
       const scope = catalogs.ambitos.find((item) => item.id === region?.ambitoId);
 
       if (!region || !zone || !scope) throw new Error("El ATET tiene una asignación territorial incompleta.");

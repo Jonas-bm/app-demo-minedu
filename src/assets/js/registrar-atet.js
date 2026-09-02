@@ -128,19 +128,22 @@
     return firstInvalidControl;
   }
 
-  function validateLocation(form, catalogs, existingAtets) {
+  function validateLocation(form, catalogs, existingAtets, context) {
     const regionId = form.elements.namedItem("atet-region").value;
     const zoneId = form.elements.namedItem("atet-zone").value;
     const region = catalogs.regiones.find((item) => item.id === regionId);
-    const zone = catalogs.zonas.find((item) => item.id === zoneId);
+    const zone = global.DEMO_ZONAS.resolve(zoneId);
+    const scopedToMacro = Boolean(context && !context.isDemoMacro && context.regionIds && context.regionIds.length);
+    const quota = scopedToMacro ? context.quotaByRegion[regionId] : null;
+    const maxZone = quota || global.DEMO_ZONAS.DEFAULT_COUNT;
     const regionError = region ? "" : "Selecciona una región.";
     let zoneError = "";
 
-    if (!zone) {
+    if (!zone || !region || zone.regionId !== region.id) {
       zoneError = "Selecciona una zona disponible.";
-    } else if (!region || zone.regionId !== region.id) {
-      zoneError = "La zona no pertenece a la región seleccionada.";
-    } else if (!zone.disponible || existingAtets.some((atet) => atet.zonaId === zone.id)) {
+    } else if (zone.numero > maxZone) {
+      zoneError = "Esa zona supera el cupo de ATET asignado en la región.";
+    } else if (existingAtets.some((atet) => atet.zonaId === zone.id)) {
       zoneError = "Esta zona ya está asignada y no puede seleccionarse.";
     }
 
@@ -236,11 +239,10 @@
 
       function zonesForRegion(region) {
         if (!region) return [];
-        const all = catalogs.zonas
-          .filter((item) => item.regionId === region.id)
-          .sort((a, b) => a.numero - b.numero);
+        // Tantas zonas como ATET contratados en la región (Zona 1 … Zona N). Si
+        // el Macro no está acotado (Macro demo), se muestra un tope por defecto.
         const quota = scopedToMacro ? context.quotaByRegion[region.id] : null;
-        return quota ? all.slice(0, Math.min(quota, all.length)) : all;
+        return global.DEMO_ZONAS.forRegion(region.id, quota || undefined);
       }
 
       function updateLocation({ keepZone = false } = {}) {
@@ -286,11 +288,12 @@
         const region = catalogs.regiones.find((item) => item.id === regionSelect.value);
         const scope = catalogs.ambitos.find((item) => item.id === region?.ambitoId);
         const occupiedZones = new Set(global.DEMO_STORE.getRegistrations().map((atet) => atet.zonaId));
-        const zone = catalogs.zonas.find((item) => item.id === zoneSelect.value && item.regionId === region?.id && item.disponible && !occupiedZones.has(item.id));
+        const zone = global.DEMO_ZONAS.resolve(zoneSelect.value);
+        const usableZone = zone && zone.regionId === region?.id && !occupiedZones.has(zone.id) ? zone : null;
         denominationInput.value = global.SERVICE_DENOMINATION.generate({
           region: region?.nombre,
           scope: scope?.nombre,
-          zoneNumber: zone?.numero
+          zoneNumber: usableZone?.numero
         });
       }
 
@@ -389,6 +392,7 @@
       status.textContent = "Verificando datos…";
       try {
         const [existingAtets, catalogs] = await Promise.all([loadExistingAtets(), loadCatalogs()]);
+        const context = global.MACRO_CONTEXT ? global.MACRO_CONTEXT.get() : null;
         const firstInvalidControl = validateIdentityAndContact(form, existingAtets);
         if (firstInvalidControl) {
           status.textContent = "Corrige los campos indicados antes de continuar.";
@@ -397,7 +401,7 @@
           save.disabled = false;
           return;
         }
-        const firstInvalidLocation = validateLocation(form, catalogs, existingAtets);
+        const firstInvalidLocation = validateLocation(form, catalogs, existingAtets, context);
         if (firstInvalidLocation) {
           status.textContent = "Selecciona una región y una zona disponible para continuar.";
           firstInvalidLocation.focus();

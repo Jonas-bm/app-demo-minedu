@@ -513,7 +513,7 @@
 
     intro.className = "import-panel import-panel--template";
     title.textContent = "1. Descarga la plantilla";
-    description.textContent = "Utiliza la plantilla de demostración para conservar los encabezados y el orden esperado.";
+    description.textContent = "La forma más simple es usar la plantilla demo. También se admite un Excel propio (.xlsx o .xlsm) siempre que tenga columnas de Región, Zona/Número, Nombres y apellidos, DNI y las fechas de inicio y término; el orden y las columnas extra no importan.";
     download.className = "registration-action registration-action--secondary";
     download.type = "button";
     download.textContent = "Descargar plantilla demo (.xlsx)";
@@ -530,7 +530,7 @@
     function showFile(file) {
       const extension = `.${file.name.split(".").pop().toLocaleLowerCase("es")}`;
       let message = "";
-      if (!config.acceptedExtensions.includes(extension)) message = "Selecciona un archivo con extensión .xlsx.";
+      if (!config.acceptedExtensions.includes(extension)) message = `Selecciona un archivo Excel (${config.acceptedExtensions.join(" o ")}).`;
       else if (file.size === 0) message = "El archivo está vacío.";
       else if (file.size > config.maximumBytes) message = "El archivo supera el tamaño máximo de 5 MB.";
 
@@ -563,7 +563,7 @@
     dropIcon.setAttribute("aria-hidden", "true");
     dropIcon.textContent = "⇧";
     dropTitle.textContent = "Selecciona o arrastra tu archivo";
-    dropHelp.textContent = "Formato .xlsx · Tamaño máximo 5 MB";
+    dropHelp.textContent = `Formato ${config.acceptedExtensions.join(" o ")} · Tamaño máximo 5 MB`;
     dropzone.append(fileInput, dropIcon, dropTitle, dropHelp);
     fileCard.className = "import-file-card";
     fileCard.hidden = true;
