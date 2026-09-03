@@ -141,10 +141,12 @@
     const activeUsers = users().filter((item) => item.estado === "Activo");
     const totalAtet = personal.atets.length + registrations.length;
     const errors = global.DEMO_STORE.getAudit().filter((item) => item.nivel === "error").length;
+    const recentActivity = global.DEMO_STORE.getAudit().slice(-5).reverse();
     container.innerHTML = `${notice()}<div class="admin-cards">${card("Usuarios", users().length, `${activeUsers.length} activos`)}${card("Macros", activeUsers.filter((item) => item.rol === "Macro").length, "Con acceso demo")}${card("ATET registrados", totalAtet, `${registrations.length} incorporados localmente`)}${card("Informes generados", reports.length, "Con numeración demo")}</div>
       <div class="admin-grid"><section class="admin-panel"><h3>Estado del sistema</h3><ul class="admin-status"><li><span class="dot dot--ok"></span>Macros activos <strong>${activeUsers.filter((item) => item.rol === "Macro").length}</strong></li><li><span class="dot dot--ok"></span>Gestores activos <strong>${activeUsers.filter((item) => item.rol === "Gestor de la Información").length}</strong></li><li><span class="dot dot--ok"></span>Jefes activos <strong>${activeUsers.filter((item) => item.rol === "Jefe").length}</strong></li><li><span class="dot dot--warn"></span>ATET pendientes de registro <strong>${Math.max(0, (dashboard.asignacion?.totalAsignados || totalAtet) - totalAtet)}</strong></li><li><span class="dot dot--error"></span>Eventos con error <strong>${errors}</strong></li></ul></section>
       <section class="admin-panel"><h3>Acciones rápidas</h3><div class="admin-actions"><a href="#usuarios-admin">Crear usuario demo</a><a href="#macros-admin">Revisar asignaciones</a><a href="#parametros-admin">Configurar catálogos</a><a href="#auditoria-admin">Ver auditoría</a></div></section></div>
-      <section class="admin-panel"><h3>Última actividad</h3>${renderAuditTable(global.DEMO_STORE.getAudit().slice(-5).reverse())}</section>`;
+      <section class="admin-panel"><h3>Última actividad</h3><div data-dashboard-activity>${renderAuditTable(recentActivity)}</div></section>`;
+    activateAuditDetails(container.querySelector("[data-dashboard-activity]"), recentActivity);
   }
 
   function auditRoute(item) {
@@ -218,12 +220,60 @@
     return `<p class="audit-value-text">${escape(value)}</p>`;
   }
 
+  function auditActionMeta(action) {
+    const value = String(action || "consulta").toLocaleLowerCase("es");
+    const actions = {
+      crear: { name: "Creación", title: "Detalle de la creación", description: "Descripción de la creación", previous: "Datos previos", next: "Datos registrados" },
+      creacion: { name: "Creación", title: "Detalle de la creación", description: "Descripción de la creación", previous: "Datos previos", next: "Datos registrados" },
+      actualizar: { name: "Actualización", title: "Detalle de la actualización", description: "Descripción del cambio", previous: "Valor anterior", next: "Valor actualizado" },
+      actualizacion: { name: "Actualización", title: "Detalle de la actualización", description: "Descripción del cambio", previous: "Valor anterior", next: "Valor actualizado" },
+      corregir: { name: "Corrección", title: "Detalle de la corrección", description: "Motivo de la corrección", previous: "Datos antes de corregir", next: "Datos corregidos" },
+      eliminar: { name: "Eliminación", title: "Detalle de la eliminación", description: "Motivo de la eliminación", previous: "Datos antes de eliminar", next: "Resultado de la eliminación" },
+      "cambiar-estado": { name: "Cambio de estado", title: "Detalle del cambio de estado", description: "Motivo del cambio", previous: "Estado anterior", next: "Estado actualizado" },
+      "restablecer-acceso": { name: "Restablecimiento de acceso", title: "Detalle del restablecimiento", description: "Descripción del restablecimiento", previous: "Acceso anterior", next: "Acceso restablecido" },
+      importar: { name: "Importación", title: "Detalle de la importación", description: "Resultado de la importación", previous: "Datos previos", next: "Datos importados" },
+      inicio: { name: "Inicio de sesión", title: "Detalle del inicio de sesión", description: "Resultado", previous: "Valor anterior", next: "Valor nuevo" },
+      "validación": { name: "Validación", title: "Detalle de la validación", description: "Resultado de la validación", previous: "Datos evaluados", next: "Resultado" }
+    };
+    return actions[value] || { name: value.charAt(0).toLocaleUpperCase("es") + value.slice(1), title: "Detalle de la actividad", description: "Descripción", previous: "Valor anterior", next: "Valor nuevo" };
+  }
+
+  function auditDescription(item) {
+    const detail = String(item.detalle || "Evento de demostración.");
+    if (String(item.accion).toLocaleLowerCase("es") === "eliminar") {
+      return detail.replace(/^Se desactivó automáticamente:/i, "Se eliminó automáticamente:");
+    }
+    return detail;
+  }
+
+  function openAuditDetail(item) {
+    const action = auditActionMeta(item.accion);
+    const dialog = document.createElement("dialog");
+    dialog.className = "admin-user-modal audit-detail-modal";
+    dialog.innerHTML = `<article><header class="admin-user-modal__header"><div><h3>${escape(action.title)}</h3><p>${escape(auditModuleLabel(item.entidad))} · ${escape(auditRecordLabel(item))}</p></div><button class="admin-user-modal__close" type="button" aria-label="Cerrar">×</button></header><div class="admin-user-modal__body"><dl class="audit-detail-list"><div><dt>Fecha y hora</dt><dd>${escape(date(item.fecha))}</dd></div><div><dt>Responsable</dt><dd>${escape(item.usuario)} · ${escape(item.rol || "Demo")}</dd></div><div><dt>Acción realizada</dt><dd>${escape(action.name)}</dd></div><div><dt>${escape(action.description)}</dt><dd>${escape(auditDescription(item))}</dd></div>${item.anterior !== null && item.anterior !== undefined ? `<div><dt>${escape(action.previous)}</dt><dd>${auditValueHtml(item.anterior)}</dd></div>` : ""}${item.nuevo !== null && item.nuevo !== undefined ? `<div><dt>${escape(action.next)}</dt><dd>${auditValueHtml(item.nuevo)}</dd></div>` : ""}</dl></div></article>`;
+    document.body.append(dialog);
+    const close = () => { dialog.close(); dialog.remove(); };
+    dialog.querySelector("button").addEventListener("click", close);
+    dialog.addEventListener("cancel", (event) => { event.preventDefault(); close(); });
+    dialog.addEventListener("click", (event) => { if (event.target === dialog) close(); });
+    dialog.showModal();
+  }
+
+  function activateAuditDetails(container, entries) {
+    container.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-audit-detail]");
+      if (!button) return;
+      const item = entries[Number(button.dataset.auditDetail)];
+      if (item) openAuditDetail(item);
+    });
+  }
+
   function renderAuditTable(entries) {
     if (!entries.length) return '<p class="atet-state">Aún no hay eventos locales. Las operaciones nuevas aparecerán aquí.</p>';
     return `<div class="admin-table-wrap audit-table-wrap" data-admin-paged-table><table class="admin-table audit-table"><thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Rol</th><th>Módulo</th><th>Acción</th><th>Descripción</th><th>Registro afectado</th><th>Detalle</th></tr></thead><tbody>${entries.map((item, index) => {
       const route = auditRoute(item);
       const record = escape(auditRecordLabel(item));
-      return `<tr><td class="audit-date">${escape(date(item.fecha))}</td><td><span class="audit-user"><span class="audit-user__avatar">${escape(initials(item.usuario))}</span>${escape(item.usuario)}</span></td><td class="audit-role">${escape(item.rol || "Demo")}</td><td class="audit-module">${escape(auditModuleLabel(item.entidad))}</td><td><span class="audit-action audit-action--${actionKind(item.accion)}">${escape(item.accion)}</span></td><td class="audit-description">${escape(item.detalle)}</td><td class="audit-record">${route ? `<a class="audit-record-link" href="#${route}" title="Abrir ${escape(auditModuleLabel(item.entidad))}">${record}</a>` : `<span class="audit-record-code">${record}</span>`}</td><td><button class="audit-detail-button" type="button" data-audit-detail="${index}" aria-label="Ver detalle de ${record}">Ver</button></td></tr>`;
+      return `<tr><td class="audit-date">${escape(date(item.fecha))}</td><td><span class="audit-user"><span class="audit-user__avatar">${escape(initials(item.usuario))}</span>${escape(item.usuario)}</span></td><td class="audit-role">${escape(item.rol || "Demo")}</td><td class="audit-module">${escape(auditModuleLabel(item.entidad))}</td><td><span class="audit-action audit-action--${actionKind(item.accion)}">${escape(item.accion)}</span></td><td class="audit-description">${escape(auditDescription(item))}</td><td class="audit-record">${route ? `<a class="audit-record-link" href="#${route}" title="Abrir ${escape(auditModuleLabel(item.entidad))}">${record}</a>` : `<span class="audit-record-code">${record}</span>`}</td><td><button class="audit-detail-button" type="button" data-audit-detail="${index}" aria-label="Ver detalle de ${record}">Ver</button></td></tr>`;
     }).join("")}</tbody></table></div>`;
   }
 
@@ -672,16 +722,7 @@
       const button = event.target.closest("[data-audit-detail]");
       if (!button) return;
       const item = filteredEntries[Number(button.dataset.auditDetail)];
-      if (!item) return;
-      const dialog = document.createElement("dialog");
-      dialog.className = "admin-user-modal audit-detail-modal";
-      dialog.innerHTML = `<article><header class="admin-user-modal__header"><div><h3>Detalle de la actividad</h3><p>${escape(auditRecordLabel(item))}</p></div><button class="admin-user-modal__close" type="button" aria-label="Cerrar">×</button></header><div class="admin-user-modal__body"><dl class="audit-detail-list"><div><dt>Fecha y hora</dt><dd>${escape(date(item.fecha))}</dd></div><div><dt>Usuario y rol</dt><dd>${escape(item.usuario)} · ${escape(item.rol || "Demo")}</dd></div><div><dt>Módulo</dt><dd>${escape(auditModuleLabel(item.entidad))}</dd></div><div><dt>Acción</dt><dd>${escape(item.accion)}</dd></div><div><dt>Descripción</dt><dd>${escape(item.detalle)}</dd></div>${item.anterior !== null && item.anterior !== undefined ? `<div><dt>Valor anterior</dt><dd>${auditValueHtml(item.anterior)}</dd></div>` : ""}${item.nuevo !== null && item.nuevo !== undefined ? `<div><dt>Valor nuevo</dt><dd>${auditValueHtml(item.nuevo)}</dd></div>` : ""}</dl></div></article>`;
-      document.body.append(dialog);
-      const close = () => { dialog.close(); dialog.remove(); };
-      dialog.querySelector("button").addEventListener("click", close);
-      dialog.addEventListener("cancel", (event) => { event.preventDefault(); close(); });
-      dialog.addEventListener("click", (event) => { if (event.target === dialog) close(); });
-      dialog.showModal();
+      if (item) openAuditDetail(item);
     });
     container.querySelector("[data-export-events]").addEventListener("click", () => {
       const csv = ["fecha,usuario,rol,modulo,accion,descripcion,registro_afectado", ...filteredEntries.map((item) => [item.fecha, item.usuario, item.rol, item.entidad, item.accion, item.detalle, item.entidadId].map((value) => `"${String(value || "").replaceAll('"', '""')}"`).join(","))].join("\n");
