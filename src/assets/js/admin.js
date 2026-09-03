@@ -453,7 +453,7 @@
     const allAtets = [...personal.atets, ...registrations];
     const regionMap = new Map(catalogs.regiones.map((item) => [item.id, item]));
     const ambitoMap = new Map(catalogs.ambitos.map((item) => [item.id, item.nombre]));
-    const rows = assignments.map((item) => {
+    const assignmentRows = assignments.map((item) => {
       const macroUser = allUsers.find((user) => user.id === item.macroId);
       const isDemoMacro = !macroUser || !macroUser.usuario || macroUser.usuario === "macro.demo";
       // El Macro demo usa el padrón precargado por región; un Macro creado por el
@@ -463,15 +463,41 @@
         : registrations.filter((atet) => atet.macroUserId === item.macroId && atet.regionId === item.regionId).length;
       const registered = Math.min(item.assigned, registeredCount);
       const region = regionMap.get(item.regionId);
-      return { ...item, region: region?.nombre || item.regionId, ambito: ambitoMap.get(region?.ambitoId) || "—", registered, pending: Math.max(0, item.assigned - registered) };
+      return { ...item, userStatus: macroUser?.estado || "Activo", region: region?.nombre || item.regionId, ambito: ambitoMap.get(region?.ambitoId) || "—", registered, pending: Math.max(0, item.assigned - registered) };
     });
-    const activeRows = rows.filter((item) => item.status === "Activo");
+    const assignedMacroIds = new Set(assignmentRows.map((item) => item.macroId));
+    const unassignedRows = allUsers
+      .filter((user) => user.rol === "Macro" && !assignedMacroIds.has(user.id))
+      .map((user) => ({
+        id: "",
+        macroId: user.id,
+        macro: user.nombre,
+        ambito: "—",
+        region: "—",
+        group: "Sin asignación",
+        assigned: 0,
+        registered: 0,
+        pending: 0,
+        status: "Sin asignación",
+        userStatus: user.estado
+      }));
+    const rows = [...assignmentRows, ...unassignedRows];
+    const activeRows = assignmentRows.filter((item) => item.status === "Activo");
     const totalAssigned = activeRows.reduce((sum, item) => sum + item.assigned, 0);
     const totalRegistered = activeRows.reduce((sum, item) => sum + item.registered, 0);
     const macrosConRegiones = new Set(activeRows.map((item) => item.macroId)).size;
-    container.innerHTML = `${notice()}<div class="admin-toolbar"><div><strong>Asignación de ATET por grupos</strong><p class="admin-help">El Administrador asigna cupos grupales; no selecciona cada ATET individualmente. Un Macro puede tener varias regiones a su cargo (del mismo ámbito); cada región pertenece a un solo Macro.</p></div><button class="registration-action registration-action--primary" data-assignment-add type="button">Asignar grupo</button></div><div class="admin-cards admin-assignment-summary">${card("Regiones asignadas", activeRows.length, `${macrosConRegiones} ${macrosConRegiones === 1 ? "Macro" : "Macros"} con cobertura`)}${card("ATET asignados", totalAssigned, "Cupo total")}${card("Registrados", totalRegistered, "ATET registrados por los Macros")}${card("Pendientes", Math.max(0, totalAssigned - totalRegistered), "Por completar registro")}</div>${table(["Macro", "Ámbito", "Región", "Grupo", "ATET asignados", "Registrados", "Pendientes", "Estado", "Acciones"], rows.map((item) => `<tr><td>${escape(item.macro)}</td><td>${escape(item.ambito)}</td><td>${escape(item.region)}</td><td>${escape(item.group)}</td><td><strong>${item.assigned}</strong></td><td>${item.registered}</td><td>${item.pending}</td><td><span class="admin-badge admin-badge--${item.status === "Activo" ? "ok" : "off"}">${escape(item.status)}</span></td><td><div class="admin-row-actions"><button type="button" data-assignment-edit="${escape(item.id)}">Editar</button></div></td></tr>`))}<p class="admin-help">Los ATET registrados se cuentan a partir de los que cada Macro registra o importa en cada región. Un Macro puede cubrir varias regiones del mismo ámbito; una región solo puede pertenecer a un Macro (una segunda asignación para la misma región se elimina y queda registrada en el Historial de actividades).</p>`;
+    container.innerHTML = `${notice()}<div class="admin-toolbar"><div><strong>Asignación de ATET por grupos</strong><p class="admin-help">La tabla incluye todos los usuarios Macro, aunque todavía no tengan un grupo asignado. Un Macro puede tener varias regiones a su cargo (del mismo ámbito); cada región pertenece a un solo Macro.</p></div><button class="registration-action registration-action--primary" data-assignment-add type="button">Asignar grupo</button></div><div class="admin-cards admin-assignment-summary">${card("Regiones asignadas", activeRows.length, `${macrosConRegiones} ${macrosConRegiones === 1 ? "Macro" : "Macros"} con cobertura`)}${card("ATET asignados", totalAssigned, "Cupo total")}${card("Registrados", totalRegistered, "ATET registrados por los Macros")}${card("Pendientes", Math.max(0, totalAssigned - totalRegistered), "Por completar registro")}</div>${table(["Macro", "Ámbito", "Región", "Grupo", "ATET asignados", "Registrados", "Pendientes", "Estado", "Acciones"], rows.map((item) => `<tr><td>${escape(item.macro)}</td><td>${escape(item.ambito)}</td><td>${escape(item.region)}</td><td>${escape(item.group)}</td><td><strong>${item.assigned}</strong></td><td>${item.registered}</td><td>${item.pending}</td><td><span class="admin-badge admin-badge--${item.status === "Activo" ? "ok" : "off"}">${escape(item.status)}</span>${item.userStatus === "Inactivo" ? ' <span class="admin-badge admin-badge--off">Usuario inactivo</span>' : ""}</td><td><div class="admin-row-actions">${item.id ? `<button type="button" data-assignment-edit="${escape(item.id)}">Editar</button>` : item.userStatus === "Activo" ? `<button type="button" data-assignment-add-macro="${escape(item.macroId)}">Asignar grupo</button>` : '<span class="admin-protected-account">Activa el usuario para asignar</span>'}</div></td></tr>`))}<p class="admin-help">Los ATET registrados se cuentan a partir de los que cada Macro registra o importa en cada región. Un Macro puede cubrir varias regiones del mismo ámbito; una región solo puede pertenecer a un Macro (una segunda asignación para la misma región se elimina y queda registrada en el Historial de actividades).</p>`;
     container.querySelector("[data-assignment-add]").addEventListener("click", () => openMacroAssignmentModal(container, null, assignments, catalogs.regiones, catalogs.ambitos));
-    container.onclick = (event) => { const button = event.target.closest("[data-assignment-edit]"); if (!button) return; const item = assignments.find((current) => current.id === button.dataset.assignmentEdit); if (item) openMacroAssignmentModal(container, item, assignments, catalogs.regiones, catalogs.ambitos); };
+    container.onclick = (event) => {
+      const editButton = event.target.closest("[data-assignment-edit]");
+      if (editButton) {
+        const item = assignments.find((current) => current.id === editButton.dataset.assignmentEdit);
+        if (item) openMacroAssignmentModal(container, item, assignments, catalogs.regiones, catalogs.ambitos);
+        return;
+      }
+      const addButton = event.target.closest("[data-assignment-add-macro]");
+      if (addButton) openMacroAssignmentModal(container, null, assignments, catalogs.regiones, catalogs.ambitos, addButton.dataset.assignmentAddMacro);
+    };
     activateAdminPagination(container);
   }
 
