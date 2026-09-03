@@ -11,9 +11,7 @@
     { id: "USR-004", usuario: "admin.demo", nombre: "Administrador Demo", rol: "Administrador", estado: "Activo" }
   ];
   const seedMacroAssignments = [
-    { id: "ASG-001", macroId: "USR-001", macro: "Macro Demo", group: "Grupo 01", regionId: "reg-amazonas", assigned: 50, status: "Activo" },
-    { id: "ASG-002", macroId: "macro-norte-demo", macro: "Macro Norte Demo", group: "Grupo 02", regionId: "reg-loreto", assigned: 40, status: "Activo" },
-    { id: "ASG-003", macroId: "macro-centro-demo", macro: "Macro Centro Demo", group: "Grupo 03", regionId: "reg-lima", assigned: 35, status: "Activo" }
+    { id: "ASG-001", macroId: "USR-001", macro: "Macro Demo", group: "Grupo 01", regionId: "reg-amazonas", assigned: 10, status: "Activo" }
   ];
 
   function loadData() {

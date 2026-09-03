@@ -132,8 +132,7 @@
     return wrapper;
   }
 
-  function renderTracking(container, rows, reports) {
-    const evaluated = rows.filter((item) => ["conforme", "observada"].includes(item.evaluacion.estado));
+  function renderTracking(container, rows, reports, assignmentRows) {
     const grid = document.createElement("div");
     const macroPanel = document.createElement("section");
     const reportPanel = document.createElement("section");
@@ -144,8 +143,8 @@
     macroTitle.textContent = "Resumen por Macro";
     reportTitle.textContent = "Últimos informes generados";
     macroPanel.append(macroTitle, createSimpleTable(
-      ["Macro", "Esperados", "Presentados", "Evaluados", "Pendientes"],
-      [["Macro Demo", rows.length, rows.filter((item) => item.presentacion.fecha).length, evaluated.length, Math.max(0, rows.length - evaluated.length)]],
+      ["Macro", "ATET asignados", "ATET registrados", "Pendientes"],
+      assignmentRows.map((item) => [item.macro, item.asignados, item.registrados, item.pendientes]),
       "Resumen ejecutivo por Macro"
     ));
     reportPanel.append(reportTitle);
@@ -230,6 +229,19 @@
       const rows = global.DELIVERABLE_CALCULATIONS.buildExpectedDeliverables(
         dashboard, personal, global.DEMO_STORE.getPresentations(), global.DEMO_STORE.getEvaluations()
       );
+      const readList = (key) => {
+        try {
+          const value = JSON.parse(localStorage.getItem(key) || "[]");
+          return Array.isArray(value) ? value : [];
+        } catch { return []; }
+      };
+      const assignmentRows = global.ATET_CALCULATIONS.calculateMacroAssignments({
+        personal,
+        registrations: global.DEMO_STORE.getRegistrations().filter((item) => item.estado === "activo" || item.estado === "Activo"),
+        assignments: readList("demoMacroAssignments"),
+        users: readList("demoAdminUsers")
+      });
+      const activeAtets = assignmentRows.reduce((total, item) => total + item.registrados, 0);
       const periodMap = new Map(catalogs.periodos.map((item) => [item.id, item]));
       const periodIds = [...new Set(rows.map((item) => item.periodoId))].filter((id) => periodMap.has(id));
       const controls = document.createElement("div");
@@ -257,9 +269,9 @@
         const reports = global.DEMO_STORE.getReports()
           .filter((report) => periodRows.some((item) => item.id === report.entregableId))
           .sort((first, second) => String(second.generadoEn).localeCompare(String(first.generadoEn)));
-        renderMetrics(metrics, periodRows, personal.atets.filter((item) => item.estado === "activo").length, reports);
+        renderMetrics(metrics, periodRows, activeAtets, reports);
         renderProgress(progress, periodRows, reports);
-        renderTracking(tracking, periodRows, reports);
+        renderTracking(tracking, periodRows, reports, assignmentRows);
         renderSummary(summary, periodRows);
       }
       select.addEventListener("change", update);

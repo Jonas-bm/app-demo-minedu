@@ -44,14 +44,13 @@
     return wrapper;
   }
 
-  function createTable(summary) {
+  function createTable(summaries) {
     const wrapper = document.createElement("div");
     const table = document.createElement("table");
     const caption = document.createElement("caption");
     const head = document.createElement("thead");
     const headRow = document.createElement("tr");
     const body = document.createElement("tbody");
-    const row = document.createElement("tr");
     wrapper.className = "macro-progress__table-wrapper";
     table.className = "macro-progress__table";
     caption.className = "sr-only";
@@ -62,19 +61,22 @@
       th.textContent = text;
       headRow.append(th);
     });
-    [summary.macro, summary.asignados, summary.registrados, summary.pendientes].forEach((value) => {
-      const cell = document.createElement("td");
-      cell.textContent = value;
-      row.append(cell);
+    summaries.forEach((summary) => {
+      const row = document.createElement("tr");
+      [summary.macro, summary.asignados, summary.registrados, summary.pendientes].forEach((value) => {
+        const cell = document.createElement("td");
+        cell.textContent = value;
+        row.append(cell);
+      });
+      const presentationCell = document.createElement("td");
+      const evaluationCell = document.createElement("td");
+      const reportCell = document.createElement("td");
+      presentationCell.append(createProgress(summary.presentados, summary.esperados, `Avance de presentación de ${summary.macro}`));
+      evaluationCell.append(createProgress(summary.evaluados, summary.esperados, `Avance de evaluación de ${summary.macro}`));
+      reportCell.append(createProgress(summary.informes, summary.evaluados, `Avance de informes de ${summary.macro}`));
+      row.append(presentationCell, evaluationCell, reportCell);
+      body.append(row);
     });
-    const presentationCell = document.createElement("td");
-    const evaluationCell = document.createElement("td");
-    const reportCell = document.createElement("td");
-    presentationCell.append(createProgress(summary.presentados, summary.esperados, `Avance de presentación de ${summary.macro}`));
-    evaluationCell.append(createProgress(summary.evaluados, summary.esperados, `Avance de evaluación de ${summary.macro}`));
-    reportCell.append(createProgress(summary.informes, summary.evaluados, `Avance de informes de ${summary.macro}`));
-    row.append(presentationCell, evaluationCell, reportCell);
-    body.append(row);
     head.append(headRow);
     table.append(caption, head, body);
     wrapper.append(table);
@@ -105,9 +107,18 @@
       const deliverables = global.DELIVERABLE_CALCULATIONS.buildExpectedDeliverables(
         dashboard, personal, global.DEMO_STORE.getPresentations(), global.DEMO_STORE.getEvaluations()
       );
-      const assignment = global.ATET_CALCULATIONS.calculateAssignment({
-        ...personal,
-        atets: personal.atets.concat(global.DEMO_STORE.getRegistrations())
+      const readList = (key) => {
+        try {
+          const value = JSON.parse(localStorage.getItem(key) || "[]");
+          return Array.isArray(value) ? value : [];
+        } catch { return []; }
+      };
+      const registrations = global.DEMO_STORE.getRegistrations();
+      const assignmentRows = global.ATET_CALCULATIONS.calculateMacroAssignments({
+        personal,
+        registrations,
+        assignments: readList("demoMacroAssignments"),
+        users: readList("demoAdminUsers")
       });
       const periodMap = new Map(catalogs.periodos.map((item) => [item.id, item]));
       const periodIds = [...new Set(deliverables.map((item) => item.periodoId))].filter((id) => periodMap.has(id));
@@ -143,16 +154,19 @@
 
       function update() {
         const rows = deliverables.filter((item) => item.periodoId === select.value);
-        const evaluatedIds = rows.filter((item) => ["conforme", "observada"].includes(item.evaluacion.estado)).map((item) => item.id);
-        const summary = {
-          macro: "Macro Demo",
-          ...assignment,
-          esperados: rows.length,
-          presentados: rows.filter((item) => item.presentacion.fecha).length,
-          evaluados: evaluatedIds.length,
-          informes: global.DEMO_STORE.getReports().filter((report) => evaluatedIds.includes(report.entregableId)).length
-        };
-        results.replaceChildren(createTable(summary), createPager());
+        const summaries = assignmentRows.map((assignment) => {
+          const isDemoMacro = assignment.macro === "Macro Demo";
+          const macroRows = isDemoMacro ? rows : rows.filter(() => false);
+          const evaluatedIds = macroRows.filter((item) => ["conforme", "observada"].includes(item.evaluacion.estado)).map((item) => item.id);
+          return {
+            ...assignment,
+            esperados: macroRows.length,
+            presentados: macroRows.filter((item) => item.presentacion.fecha).length,
+            evaluados: evaluatedIds.length,
+            informes: global.DEMO_STORE.getReports().filter((report) => evaluatedIds.includes(report.entregableId)).length
+          };
+        });
+        results.replaceChildren(createTable(summaries), createPager());
       }
       select.addEventListener("change", update);
       section.append(heading, filters, results);
