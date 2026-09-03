@@ -94,6 +94,23 @@ input {
   font-weight: 700;
 }
 
+.login-card__system-name,
+.login-card__system-description {
+  display: block;
+}
+
+.login-card__system-name {
+  margin-bottom: 0.65rem;
+  color: var(--navy);
+  font-size: clamp(2rem, 6vw, 3rem);
+  line-height: 1;
+}
+
+.login-card__system-description {
+  font-size: clamp(1.15rem, 3vw, 1.55rem);
+  line-height: 1.35;
+}
+
 .field {
   margin-bottom: 1.5rem;
 }
@@ -246,5 +263,9 @@ input {
 @media (max-width: 410px) {
   .brand p {
     font-size: 0.8rem;
+  }
+
+  .login-card__system-description {
+    font-size: 1.05rem;
   }
 }
